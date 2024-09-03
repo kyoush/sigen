@@ -20,8 +20,6 @@ fn generate_sine_wave(amplitude: f32, duration: u32, frequency: u32) -> Vec<f32>
         samples.push(sample);
     }
 
-    println!("gen_sine: {}", samples.len() / FS as usize);
-
     samples
 }
 
@@ -64,7 +62,6 @@ fn write_wav_file(filename: &str, samples: &[f32], channels: u32) -> Result<(), 
     let mut writer = WavWriter::create(filename, spec)?;
 
     let total_samples = samples.len();
-    println!("{}", total_samples);
 
     for i in 0..total_samples {
         let sample_value: i16 = (samples[i] * i16::MAX as f32).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
@@ -81,7 +78,7 @@ fn print_help() {
     println!("Usage: signal_generator -a <amplitude> -d <duration> -t <type> [-f <frequency>]");
     println!("Options:");
     println!("  -a <amplitude>   Amplitude of the signal (default: 0.45)");
-    println!("  -d <duration>    Duration of the signal in seconds (default: 1.0)");
+    println!("  -d <duration>    Duration of the signal in seconds (default: 5");
     println!("  -t <type>        Type of the signal: 'sine' or 'white' (default: 'sine')");
     println!("  -f <frequency>   Frequency of the sine wave in Hz (default: 440, required if type is 'sine')");
     println!("  -h               Show this help message");
