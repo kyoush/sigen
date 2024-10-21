@@ -6,7 +6,7 @@ use std::f32::consts::PI;
 const FS: u32 = 44100; // Hz
 const CH: u32 = 2; // stereo
 const AMP: f32 = 0.45;
-const D: u32 = 5; // sec
+const D: u32 = 30; // sec
 const N: usize = 2048; // samples of taper
 
 fn generate_sine_wave(amplitude: f32, duration: u32, frequency: u32) -> Vec<f32> {
@@ -51,7 +51,7 @@ fn apply_linear_taper(samples: &mut [f32], taper_size: usize) {
     }
 }
 
-fn write_wav_file(filename: &str, samples: &[f32], channels: u32) -> Result<(), Box<dyn std::error::Error>> {
+fn write_wav_file(filename: &str, samples: &[f32], channels: u32, enable_l: bool, enable_r: bool) -> Result<(), Box<dyn std::error::Error>> {
     let spec = WavSpec {
         channels: channels as u16,
         sample_rate: FS,
@@ -65,9 +65,8 @@ fn write_wav_file(filename: &str, samples: &[f32], channels: u32) -> Result<(), 
 
     for i in 0..total_samples {
         let sample_value: i16 = (samples[i] * i16::MAX as f32).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
-        for _ in 0..channels {
-            writer.write_sample(sample_value)?;
-        }
+        writer.write_sample(sample_value * (enable_l as i16))?;
+        writer.write_sample(sample_value * (enable_r as i16))?;
     }
 
     writer.flush()?;
@@ -78,9 +77,10 @@ fn print_help() {
     println!("Usage: signal_generator -a <amplitude> -d <duration> -t <type> [-f <frequency>]");
     println!("Options:");
     println!("  -a <amplitude>   Amplitude of the signal (default: 0.45)");
-    println!("  -d <duration>    Duration of the signal in seconds (default: 5");
+    println!("  -d <duration>    Duration of the signal in seconds (default: 30");
     println!("  -t <type>        Type of the signal: 'sine' or 'white' (default: 'sine')");
     println!("  -f <frequency>   Frequency of the sine wave in Hz (default: 440, required if type is 'sine')");
+    println!("  -c <channels>    Which channel generate ... [L, R, LR] (default: LR)");
     println!("  -h               Show this help message");
 }
 
@@ -91,6 +91,9 @@ fn main() {
     let mut d = D;
     let mut signal_type = "sine".to_string();
     let mut freq = 440;
+    let mut enable_l = true;
+    let mut enable_r = true;
+    let mut filename_ch = "";
 
     let mut i = 1;
     while i < args.len() {
@@ -131,6 +134,38 @@ fn main() {
                     exit(1);
                 }
             }
+            "-c" => {
+                if i + 1 < args.len() {
+                    let channel = &args[i + 1];
+                    match channel.as_str() {
+                        "L" => {
+                            enable_l = true;
+                            enable_r = false;
+                            filename_ch = "_l_only";
+                            i += 1;
+                        }    // Lチャンネルのみ
+                        "R" => {
+                            enable_l = false;
+                            enable_r = true;
+                            filename_ch = "_r_only";
+                            i += 1;
+                        }    // Rチャンネルのみ
+                        "LR" => {
+                            enable_l = true;
+                            enable_r = true;
+                            i += 1;
+                        }    // 両チャンネル
+                        _ => {
+                            eprintln!("Invalid channel option: {}", channel);
+                            eprintln!("Valid options are: L, R, LR");
+                            exit(1);
+                        }
+                    };
+                } else {
+                    eprintln!("Error: Missing value for -c");
+                    exit(1);
+                }
+            }
             "-h" => {
                 print_help();
                 exit(0);
@@ -156,8 +191,8 @@ fn main() {
 
     apply_linear_taper(&mut samples, N);
 
-    let filename = format!("{}.wav", signal_type);
-    if let Err(e) = write_wav_file(&filename, &samples, ch) {
+    let filename = format!("{}{}.wav", signal_type, filename_ch);
+    if let Err(e) = write_wav_file(&filename, &samples, ch, enable_l, enable_r) {
         eprintln!("Error writing WAV file: {}", e);
         exit(1);
     }
