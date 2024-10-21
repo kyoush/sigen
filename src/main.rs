@@ -7,7 +7,7 @@ const FS: u32 = 44100; // Hz
 const CH: u32 = 2; // stereo
 const AMP: f32 = 0.45;
 const D: u32 = 30; // sec
-const N: usize = 2048; // samples of taper
+const N: usize = 4096; // samples of taper
 
 fn generate_sine_wave(amplitude: f32, duration: u32, frequency: u32) -> Vec<f32> {
     let sample_count = (duration * FS) as usize;
@@ -71,6 +71,20 @@ fn write_wav_file(filename: &str, samples: &[f32], channels: u32, enable_l: bool
 
     writer.flush()?;
     Ok(())
+}
+
+fn gen_file_name(sig_type: &str, freq: u32, filename_ch: &str, d: u32) -> String {
+    let filename_freq = if sig_type == "sine" {
+        if freq < 1000 {
+            format!("_{}hz", freq)
+        }else {
+            format!("_{}khz", freq/1000)
+        }
+    }else {
+        String::new()
+    };
+
+    format!("{}{}_{}s{}.wav", sig_type, filename_freq, d, filename_ch)
 }
 
 fn print_help() {
@@ -191,7 +205,8 @@ fn main() {
 
     apply_linear_taper(&mut samples, N);
 
-    let filename = format!("{}{}.wav", signal_type, filename_ch);
+    let filename = gen_file_name(&signal_type, freq, filename_ch, d);
+
     if let Err(e) = write_wav_file(&filename, &samples, ch, enable_l, enable_r) {
         eprintln!("Error writing WAV file: {}", e);
         exit(1);
