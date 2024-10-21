@@ -84,14 +84,24 @@ fn gen_file_name(sig_type: &str, freq: u32, filename_ch: &str, d: u32) -> String
         String::new()
     };
 
-    format!("{}{}_{}s{}.wav", sig_type, filename_freq, d, filename_ch)
+    let filename_duration = if d >= 60 {
+        if d % 60 == 0 {
+            format!("_{}min", d/60)
+        }else {
+            format!("_{}min{}s", d / 60, d % 60)
+        }
+    }else {
+        format!("_{}s", d)
+    };
+
+    format!("{}{}{}{}.wav", sig_type, filename_freq, filename_duration, filename_ch)
 }
 
 fn print_help() {
     println!("Usage: signal_generator -a <amplitude> -d <duration> -t <type> [-f <frequency>]");
     println!("Options:");
     println!("  -a <amplitude>   Amplitude of the signal (default: 0.45)");
-    println!("  -d <duration>    Duration of the signal in seconds (default: 30");
+    println!("  -d <duration>    Duration of the signal in seconds (default: 30)");
     println!("  -t <type>        Type of the signal: 'sine' or 'white' (default: 'sine')");
     println!("  -f <frequency>   Frequency of the sine wave in Hz (default: 440, required if type is 'sine')");
     println!("  -c <channels>    Which channel generate ... [L, R, LR] (default: LR)");
