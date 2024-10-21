@@ -1,1 +1,4 @@
-/target
+Cargo.lock
+target
+*.wav
+!target/release/signal-generator
