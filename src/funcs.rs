@@ -82,6 +82,33 @@ pub fn write_wav_file(
     Ok(())
 }
 
+fn file_exists_errorcheck(filename: &String) -> String {
+    let mut override_msg = String::new();
+    if Path::new(&filename).exists() {
+        print!("file \"{}\" is already exists, override? [y/N] ", filename);
+
+        let mut input = String::new();
+        io::stdout().flush().unwrap();
+        if io::stdin().read_line(&mut input).is_err() {
+            eprintln!("Error: reading input. Exiting...");
+            exit(1);
+        }
+
+        match input.trim().to_lowercase().as_str() {
+            "n" | "no" | "" => {
+                eprintln!("Abort! The operation was canceled by the user.");
+                eprintln!("No output was generated.");
+                exit(1);
+            }
+            _ => {
+                override_msg = " (file override)".to_string();
+            }
+        }
+    }
+
+    override_msg
+}
+
 pub fn gen_file_name(sig_type: &str, freq: i32, filename_ch: &str, d: u32) -> FileInfo {
     let filename_freq = if freq < 0 {
         format!("")
@@ -106,29 +133,7 @@ pub fn gen_file_name(sig_type: &str, freq: i32, filename_ch: &str, d: u32) -> Fi
         sig_type, filename_freq, filename_duration, filename_ch
     );
 
-    let mut override_msg = String::new();
-
-    if Path::new(&filename).exists() {
-        print!("file \"{}\" is already exists, override? [y/N] ", filename);
-
-        let mut input = String::new();
-        io::stdout().flush().unwrap();
-        if io::stdin().read_line(&mut input).is_err() {
-            eprintln!("Error: reading input. Exiting...");
-            exit(1);
-        }
-
-        match input.trim().to_lowercase().as_str() {
-            "n" | "no" | "" => {
-                eprintln!("Abort! The operation was canceled by the user.");
-                eprintln!("No output was generated.");
-                exit(1);
-            }
-            _ => {
-                override_msg = " (file override)".to_string();
-            }
-        }
-    }
+    let override_msg = file_exists_errorcheck(&filename);
 
     FileInfo {
         name: filename,
