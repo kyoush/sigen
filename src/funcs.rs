@@ -1,7 +1,15 @@
+use hound::{WavSpec, WavWriter};
 use std::f32::consts::PI;
-use hound::{WavSpec,WavWriter};
+use std::path::Path;
+use std::io::{self, Write};
+use std::process::exit;
 
 const FS: u32 = 44_100; // Hz
+
+pub struct FileInfo {
+    pub name: String,
+    pub exists_msg: String,
+}
 
 pub fn generate_sine_wave(amplitude: f64, duration: u32, frequency: u32) -> Vec<f64> {
     let sample_count = (duration * FS) as usize;
@@ -20,7 +28,7 @@ pub fn generate_sine_wave(amplitude: f64, duration: u32, frequency: u32) -> Vec<
 pub fn generate_white_noise(amplitude: f64, duration: u32) -> Vec<f64> {
     let sample_count = (duration * FS) as usize;
     let mut samples = Vec::with_capacity(sample_count);
-    
+
     for _ in 0..sample_count {
         let noise = amplitude * (rand::random::<f64>() * 2.0 - 1.0);
         samples.push(noise);
@@ -31,7 +39,7 @@ pub fn generate_white_noise(amplitude: f64, duration: u32) -> Vec<f64> {
 
 pub fn apply_linear_taper(samples: &mut [f64], taper_size: usize) {
     let total_samples = samples.len();
-    
+
     let taper_size = taper_size.min(total_samples / 2);
 
     for i in 0..taper_size {
@@ -45,7 +53,13 @@ pub fn apply_linear_taper(samples: &mut [f64], taper_size: usize) {
     }
 }
 
-pub fn write_wav_file(filename: &str, samples: &[f64], channels: u32, enable_l: bool, enable_r: bool) -> Result<(), Box<dyn std::error::Error>> {
+pub fn write_wav_file(
+    filename: &str,
+    samples: &[f64],
+    channels: u32,
+    enable_l: bool,
+    enable_r: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     let spec = WavSpec {
         channels: channels as u16,
         sample_rate: FS,
@@ -58,7 +72,8 @@ pub fn write_wav_file(filename: &str, samples: &[f64], channels: u32, enable_l: 
     let total_samples = samples.len();
 
     for i in 0..total_samples {
-        let sample_value: i16 = (samples[i] * i16::MAX as f64).clamp(i16::MIN as f64, i16::MAX as f64) as i16;
+        let sample_value: i16 =
+            (samples[i] * i16::MAX as f64).clamp(i16::MIN as f64, i16::MAX as f64) as i16;
         writer.write_sample(sample_value * (enable_l as i16))?;
         writer.write_sample(sample_value * (enable_r as i16))?;
     }
@@ -67,26 +82,56 @@ pub fn write_wav_file(filename: &str, samples: &[f64], channels: u32, enable_l: 
     Ok(())
 }
 
-pub fn gen_file_name(sig_type: &String, freq: u32, filename_ch: &str, d: u32) -> String {
-    let filename_freq = if sig_type == "sine" {
-        if freq < 1000 {
-            format!("_{}hz", freq)
-        }else {
-            format!("_{}khz", freq/1000)
-        }
-    }else {
-        String::new()
+pub fn gen_file_name(sig_type: &str, freq: i32, filename_ch: &str, d: u32) -> FileInfo {
+    let filename_freq = if freq < 0 {
+        format!("")
+    } else if 0 < freq && freq < 1000 {
+        format!("_{}hz", freq)
+    } else {
+        format!("_{}khz", freq / 1000)
     };
 
     let filename_duration = if d >= 60 {
         if d % 60 == 0 {
-            format!("_{}min", d/60)
-        }else {
+            format!("_{}min", d / 60)
+        } else {
             format!("_{}min{}s", d / 60, d % 60)
         }
-    }else {
+    } else {
         format!("_{}s", d)
     };
 
-    format!("{}{}{}{}.wav", sig_type, filename_freq, filename_duration, filename_ch)
+    let filename = format!(
+        "{}{}{}{}.wav",
+        sig_type, filename_freq, filename_duration, filename_ch
+    );
+
+    let mut override_msg = String::new();
+
+    if Path::new(&filename).exists() {
+        print!("file \"{}\" is already exists, override? [y/N] ", filename);
+
+        let mut input = String::new();
+        io::stdout().flush().unwrap();
+        if io::stdin().read_line(&mut input).is_err() {
+            eprintln!("Error: reading input. Exiting...");
+            exit(1);
+        }
+
+        match input.trim().to_lowercase().as_str() {
+            "n" | "no" | "" => {
+                eprintln!("Abort! The operation was canceled by the user.");
+                eprintln!("No output was generated.");
+                exit(1);
+            }
+            _ => {
+                override_msg = " (file override)".to_string();
+            }
+        }
+    }
+
+    FileInfo {
+        name: filename,
+        exists_msg: override_msg,
+    }
 }
