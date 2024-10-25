@@ -1,20 +1,24 @@
-# signal-generator
+# sigen
 
 A tool for generating WAV files of various signal types. \
 You can control parameters such as length, frequency, and channels through command-line arguments.
+
+name: signal generator => sig. gen. => sigen
 
 ### usage
 
 ```
 $ ./signal-generator -h
-Usage: signal_generator -a <amplitude> -d <duration> -t <type> [-f <frequency>]
+Usage: sigen <COMMAND>
+
+Commands:
+  sine   generate a wav file with a sine wave
+  white  generate a wave file with a white noise
+  help   Print this message or the help of the given subcommand(s)
+
 Options:
-  -a <amplitude>   Amplitude of the signal (default: 0.45)
-  -d <duration>    Duration of the signal in seconds (default: 30)
-  -t <type>        Type of the signal: 'sine' or 'white' (default: 'sine')
-  -f <frequency>   Frequency of the sine wave in Hz (default: 440, required if type is 'sine')
-  -c <channels>    Which channel generate ... [L, R, LR] (default: LR)
-  -h               Show this help message
+  -h, --help     Print help
+  -V, --version  Print version
 ```
 
 support signal type:
@@ -24,19 +28,16 @@ support signal type:
 ### example
 
 ```bash
-./signal-generator # using default value
+$ ./sigen sine # using default value
+WAV file "sine_440hz_30s.wav" created successfully
 ```
-
-=> `sine_440hz_30s.wav` has generated!
 
 ```bash
-./signal-generator -f 5000 -c R
+$ ./sigen sine -f 5000 -c R
+WAV file "sine_5khz_30s_r_only.wav" created successfully
 ```
-
-=> `sine_5khz_30s_r_only.wav` has generated!
 
 ```bash
-./signal-generator -t white -d 600
+$ ./sigen white -d 600     
+WAV file "white_10min.wav" created successfully
 ```
-
-=> `white_10min.wav` has generated!
