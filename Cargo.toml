@@ -3,6 +3,11 @@ name = "signal-generator"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "sigen"
+path = "src/main.rs"
+
 [dependencies]
+clap = { version = "4.5.20", features = ["derive"] }
 hound = "3.5.1"
 rand = "0.8.5"
