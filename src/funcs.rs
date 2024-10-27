@@ -117,28 +117,35 @@ fn file_exists_errorcheck(filename: &String) -> String {
     override_msg
 }
 
-pub fn gen_file_name(sig_type: &str, freq: i32, filename_ch: &str, d: u32) -> FileInfo {
-    let filename_freq = if freq < 0 {
+fn freq_format(freq: i32, prefix: &str) -> String {
+    if freq < 0 {
         format!("")
     } else if 0 < freq && freq < 1000 {
-        format!("_{}hz", freq)
+        format!("_{}{}hz", prefix, freq)
     } else {
-        format!("_{}khz", freq / 1000)
-    };
+        format!("_{}{}khz", prefix, freq / 1000)
+    }
+}
 
-    let filename_duration = if d >= 60 {
-        if d % 60 == 0 {
-            format!("_{}min", d / 60)
+fn seconds_format(sec: u32) -> String{
+    if sec >= 60 {
+        if sec % 60 == 0 {
+            format!("_{}min", sec / 60)
         } else {
-            format!("_{}min{}s", d / 60, d % 60)
+            format!("_{}min{}s", sec / 60, sec % 60)
         }
     } else {
-        format!("_{}s", d)
-    };
+        format!("_{}s", sec)
+    }
+}
+
+pub fn gen_file_name(sig_type: &str, start_freq: i32, filename_ch: &str, d: u32) -> FileInfo {
+    let filename_start_freq = freq_format(start_freq, "");
+    let filename_duration = seconds_format(d);
 
     let filename = format!(
         "{}{}{}{}.wav",
-        sig_type, filename_freq, filename_duration, filename_ch
+        sig_type, filename_start_freq, filename_duration, filename_ch
     );
 
     let override_msg = file_exists_errorcheck(&filename);
