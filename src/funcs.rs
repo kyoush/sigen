@@ -139,13 +139,14 @@ fn seconds_format(sec: u32) -> String{
     }
 }
 
-pub fn gen_file_name(sig_type: &str, start_freq: i32, filename_ch: &str, d: u32) -> FileInfo {
+pub fn gen_file_name(sig_type: &str, start_freq: i32, end_freq: i32, filename_ch: &str, d: u32) -> FileInfo {
     let filename_start_freq = freq_format(start_freq, "");
+    let filename_end_freq = freq_format(end_freq, "to_");
     let filename_duration = seconds_format(d);
 
     let filename = format!(
-        "{}{}{}{}.wav",
-        sig_type, filename_start_freq, filename_duration, filename_ch
+        "{}{}{}{}{}.wav",
+        sig_type, filename_start_freq, filename_end_freq, filename_duration, filename_ch
     );
 
     let override_msg = file_exists_errorcheck(&filename);

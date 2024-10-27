@@ -34,11 +34,11 @@ fn main() {
     let fileinfo;
     match args.subcommand {
         args::Commands::Sine { frequency, options } => {
-            fileinfo = gen_file_name("sine", frequency as i32, filename_ch, options.duration);
+            fileinfo = gen_file_name("sine", frequency as i32, -1, filename_ch, options.duration);
             samples = funcs::generate_sine_wave(options.amplitude, options.duration, frequency);
         }
         args::Commands::White { options } => {
-            fileinfo = gen_file_name("white", -1, filename_ch, options.duration);
+            fileinfo = gen_file_name("white", -1, -1, filename_ch, options.duration);
             samples = funcs::generate_white_noise(options.amplitude, options.duration);
         }
     }
