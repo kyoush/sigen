@@ -5,36 +5,11 @@ use std::io::{self, Write};
 use std::process::exit;
 
 const FS: u32 = 44_100; // Hz
+const N: usize = 4096; // samples of taper
 
 pub struct FileInfo {
     pub name: String,
     pub exists_msg: String,
-}
-
-pub fn generate_sine_wave(amplitude: f64, duration: u32, frequency: u32) -> Vec<f64> {
-    let sample_count = (duration * FS) as usize;
-    let mut samples = Vec::with_capacity(sample_count);
-
-    for i in 0..sample_count {
-        let t = i as f32 / FS as f32; // 現在のサンプルの時間
-        let sample = amplitude * (2.0 * PI * frequency as f32 * t).sin() as f64;
-        // サンプルをクリップして i16 に変換
-        samples.push(sample);
-    }
-
-    samples
-}
-
-pub fn generate_white_noise(amplitude: f64, duration: u32) -> Vec<f64> {
-    let sample_count = (duration * FS) as usize;
-    let mut samples = Vec::with_capacity(sample_count);
-
-    for _ in 0..sample_count {
-        let noise = amplitude * (rand::random::<f64>() * 2.0 - 1.0);
-        samples.push(noise);
-    }
-
-    samples
 }
 
 fn apply_linear_fade_in (samples: &mut [f64], taper_size: usize) {
@@ -53,12 +28,101 @@ fn apply_linear_fade_out (samples: &mut [f64], taper_size: usize) {
     }
 }
 
-pub fn apply_linear_taper(samples: &mut [f64], taper_size: usize) {
+// @ToDo: fn apply_hanning_fade_in
+fn apply_hanning_fade_out(signal: &mut [f64], length: usize) {
+    let n = length.min(signal.len());
+
+    let window: Vec<f64> = (0..n)
+        .map(|i| 0.5 * (1.0 - (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos()))
+        .collect();
+
+    // Hanning窓の右半分を信号の後半に適用
+    for i in 0..(n / 2) {
+        signal[signal.len() - (n / 2) + i] *= window[i + n / 2];
+    }
+}
+
+fn apply_linear_taper(samples: &mut [f64 ], taper_size: usize) {
     let total_samples = samples.len();
     let taper_size = taper_size.min(total_samples / 2);
 
     apply_linear_fade_in(samples, taper_size);
     apply_linear_fade_out(samples, taper_size);
+}
+
+pub fn generate_sine_wave(amplitude: f64, duration: u32, frequency: u32) -> Vec<f64> {
+    let sample_count = (duration * FS) as usize;
+    let mut samples = Vec::with_capacity(sample_count);
+
+    for i in 0..sample_count {
+        let t = i as f32 / FS as f32; // 現在のサンプルの時間
+        let sample = amplitude * (2.0 * PI * frequency as f32 * t).sin() as f64;
+        // サンプルをクリップして i16 に変換
+        samples.push(sample);
+    }
+
+    apply_linear_taper(&mut samples, N);
+    samples
+}
+
+pub fn generate_white_noise(amplitude: f64, duration: u32) -> Vec<f64> {
+    let sample_count = (duration * FS) as usize;
+    let mut samples = Vec::with_capacity(sample_count);
+
+    for _ in 0..sample_count {
+        let noise = amplitude * (rand::random::<f64>() * 2.0 - 1.0);
+        samples.push(noise);
+    }
+
+    apply_linear_taper(&mut samples, N);
+    samples
+}
+
+fn generate_linear_tsp(amplitude: f64, duration: f64, lowfreq: f64, highfreq: f64) -> Vec<f64> {
+    let sample_count = (duration as u32 * FS) as usize;
+    let mut samples = Vec::with_capacity(sample_count);
+
+    for n in 0..sample_count {
+        let t = n as f64 / FS as f64;
+        let phase = 2.0 * PI as f64 * (lowfreq * t + ((highfreq - lowfreq) / (2.0 * duration)) * t * t);
+        samples.push(amplitude * phase.sin());
+    }
+
+    samples
+}
+
+fn generate_log_tsp(amplitude: f64, duration: f64, lowfreq: f64, highfreq: f64) -> Vec<f64> {
+    let sample_count = (duration as u32 * FS) as usize;
+    let mut samples = Vec::with_capacity(sample_count);
+
+    for n in 0..sample_count {
+        let t = n as f64 / FS as f64;
+        let freq = lowfreq * ((highfreq / lowfreq).powf(t / duration));
+        let phase = 2.0 * PI as f64 * freq * t;
+        samples.push(amplitude * phase.sin());
+    }
+
+    let cutoff_index = (sample_count as f32 * 0.75) as usize;
+
+    let signal = &samples[0..cutoff_index];
+    let mut signal_vec: Vec<f64> = signal.to_vec();
+
+    apply_hanning_fade_out(&mut signal_vec, N / 2);
+    signal_vec
+}
+
+pub fn generate_tsp_signal(amplitude: f64, duration: u32, tsp_type: String, lowfreq: i32, highfreq: i32) -> Vec<f64> {
+    let samples;
+
+    if tsp_type == "linear" {
+        samples = generate_linear_tsp(amplitude, duration as f64, lowfreq as f64, highfreq as f64);
+    } else if tsp_type == "log" {
+        samples = generate_log_tsp(amplitude, duration as f64, lowfreq as f64, highfreq as f64);
+    } else {
+        eprintln!("Error: unexpected type of tsp signal");
+        exit(1);
+    }
+    samples
 }
 
 pub fn write_wav_file(
@@ -119,8 +183,10 @@ fn file_exists_errorcheck(filename: &String) -> String {
 
 fn freq_format(freq: i32, prefix: &str) -> String {
     if freq < 0 {
-        format!("")
-    } else if 0 < freq && freq < 1000 {
+        return String::new();
+    }
+    
+    if freq < 1000 {
         format!("_{}{}hz", prefix, freq)
     } else {
         format!("_{}{}khz", prefix, freq / 1000)

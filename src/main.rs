@@ -6,7 +6,6 @@ mod args;
 mod funcs;
 
 const CH: u32 = 2; // stereo
-const N: usize = 4096; // samples of taper
 
 fn main() {
     let args = args::Cli::parse();
@@ -17,6 +16,7 @@ fn main() {
     let common_options = match &args.subcommand {
         args::Commands::Sine { options, ..} => options,
         args::Commands::White { options, ..} => options,
+        args::Commands::Tsp { options, ..} => options,
     };
 
     if common_options.channels == "L" {
@@ -30,19 +30,22 @@ fn main() {
     }
 
     // generate signals
-    let mut samples;
+    let samples;
     let fileinfo;
     match args.subcommand {
-        args::Commands::Sine { frequency, options } => {
-            fileinfo = gen_file_name("sine", frequency as i32, -1, filename_ch, options.duration);
-            samples = funcs::generate_sine_wave(options.amplitude, options.duration, frequency);
+        args::Commands::Sine { frequency, duration, options } => {
+            fileinfo = gen_file_name("sine", frequency as i32, -1, filename_ch, duration);
+            samples = funcs::generate_sine_wave(options.amplitude, duration, frequency);
         }
-        args::Commands::White { options } => {
-            fileinfo = gen_file_name("white", -1, -1, filename_ch, options.duration);
-            samples = funcs::generate_white_noise(options.amplitude, options.duration);
+        args::Commands::White { duration, options } => {
+            fileinfo = gen_file_name("white", -1, -1, filename_ch, duration);
+            samples = funcs::generate_white_noise(options.amplitude, duration);
+        }
+        args::Commands::Tsp { tsp_type, duration, startf, endf, options } => {
+            fileinfo = gen_file_name("tsp", startf, endf, filename_ch, duration);
+            samples = funcs::generate_tsp_signal(options.amplitude, duration, tsp_type, startf, endf);
         }
     }
-    funcs::apply_linear_taper(&mut samples, N);
 
     // write wav file
     if let Err(e) = funcs::write_wav_file(&fileinfo.name, &samples, CH, enable_l, enable_r) {
