@@ -11,3 +11,4 @@ path = "src/main.rs"
 clap = { version = "4.5.20", features = ["derive"] }
 hound = "3.5.1"
 rand = "0.8.5"
+rtaper = { git = "https://github.com/kyoush/rtaper.git" }
