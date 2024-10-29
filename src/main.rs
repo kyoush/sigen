@@ -32,15 +32,23 @@ fn main() {
         taper_spec: taper_spec,
     };
 
-    if spec.ch == "L" {
-        enable_l = true;
-        enable_r = false;
-        filename_ch = "_l_only";
-    }else if spec.ch == "R" {
-        enable_l = false;
-        enable_r = true;
-        filename_ch = "_r_only";
-    };
+    match spec.ch.as_str() {
+        "L" => {
+            enable_l = true;
+            enable_r = false;
+            filename_ch = "_l_only";
+        },
+        "R" => {
+            enable_l = false;
+            enable_r = true;
+            filename_ch = "_r_only";
+        },
+        "LR" => {},
+        _ => {
+            eprintln!("Error: unknown type of channels");
+            exit(1);
+        }
+    }
 
     // generate signals
     let samples;
