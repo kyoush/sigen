@@ -15,18 +15,7 @@ pub struct SignalSpec {
     pub ch: String,
     pub fs: u32,
     pub d: u32,
-    pub taper_type: String,
-    pub taper_len: usize,
-}
-
-    let window: Vec<f64> = (0..n)
-        .map(|i| 0.5 * (1.0 - (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos()))
-        .collect();
-
-    // Hanning窓の右半分を信号の後半に適用
-    for i in 0..(n / 2) {
-        samples[samples.len() - (n / 2) + i] *= window[i + n / 2];
-    }
+    pub taper_spec: rtaper::TaperSpec,
 }
 
 pub fn generate_sine_wave(spec: &SignalSpec, frequency: u32) -> Vec<f64> {
@@ -40,7 +29,7 @@ pub fn generate_sine_wave(spec: &SignalSpec, frequency: u32) -> Vec<f64> {
         samples.push(sample);
     }
 
-    rtaper::apply_taper(&mut samples, &spec);
+    rtaper::apply_taper(&mut samples, &spec.taper_spec);
     samples
 }
 
@@ -53,7 +42,7 @@ pub fn generate_white_noise(spec: &SignalSpec) -> Vec<f64> {
         samples.push(noise);
     }
 
-    rtaper::apply_taper(&mut samples, &spec);
+    rtaper::apply_taper(&mut samples, &spec.taper_spec);
     samples
 }
 
@@ -84,7 +73,6 @@ fn generate_log_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Vec<f64> 
     let cutoff_index = (sample_count as f32 * 0.75) as usize;
 
     let signal = &samples[0..cutoff_index];
-    let mut signal_vec: Vec<f64> = signal.to_vec();
     signal.to_vec()
 }
 
@@ -99,7 +87,7 @@ pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: String, lowfreq: i32, hi
         eprintln!("Error: unexpected type of tsp signal");
         exit(1);
     }
-    rtaper::apply_hanning_fade_out(&mut samples, spec.taper_len);
+    rtaper::apply_hanning_fade_out(&mut samples, spec.taper_spec.taper_length);
     samples
 }
 

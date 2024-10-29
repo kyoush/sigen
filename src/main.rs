@@ -1,6 +1,6 @@
 use std::process::exit;
 use clap::Parser;
-use funcs::{gen_file_name, SignalSpec};
+use rtaper;
 
 mod args;
 mod funcs;
@@ -18,14 +18,18 @@ fn main() {
         args::Commands::White { options, duration, ..} => (options, *duration),
         args::Commands::Tsp { options, duration, ..} => (options, *duration),
     };
+    
+    let taper_spec = rtaper::TaperSpec {
+        taper_type: common_options.taper_type.clone(),
+        taper_length: common_options.length_of_taper,
+    };
 
-    let spec = SignalSpec {
+    let spec = funcs::SignalSpec {
         amp: common_options.amplitude,
         ch: common_options.channels.clone(),
         fs: common_options.rate_of_sample,
         d: duration,
-        taper_type: common_options.taper_type.clone(),
-        taper_len: common_options.length_of_taper,
+        taper_spec: taper_spec,
     };
 
     if spec.ch == "L" {
@@ -43,15 +47,15 @@ fn main() {
     let fileinfo;
     match args.subcommand {
         args::Commands::Sine { frequency, .. } => {
-            fileinfo = gen_file_name("sine", frequency as i32, -1, filename_ch, spec.d);
+            fileinfo = funcs::gen_file_name("sine", frequency as i32, -1, filename_ch, spec.d);
             samples = funcs::generate_sine_wave(&spec, frequency);
         }
         args::Commands::White { .. } => {
-            fileinfo = gen_file_name("white", -1, -1, filename_ch, spec.d);
+            fileinfo = funcs::gen_file_name("white", -1, -1, filename_ch, spec.d);
             samples = funcs::generate_white_noise(&spec);
         }
         args::Commands::Tsp { tsp_type, startf, endf, ..} => {
-            fileinfo = gen_file_name("tsp", startf, endf, filename_ch, spec.d);
+            fileinfo = funcs::gen_file_name("tsp", startf, endf, filename_ch, spec.d);
             samples = funcs::generate_tsp_signal(&spec, tsp_type, startf, endf);
         }
     }
