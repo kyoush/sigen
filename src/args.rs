@@ -1,12 +1,13 @@
 use clap::{Args, Parser, Subcommand};
 
 const AMP_DEF: f64 = 0.45;
-const D_DEF_LONG: u32 = 30; // sec
-const D_DEF_SHORT: u32 = 5; // sec
-pub const FREQ_DEF: u32 = 440; // Hz
-const LOW_FREQ_TSP_DEF: i32 = 20; // Hz
+const D_DEF_LONG: u32 = 30;        // sec
+const D_DEF_SHORT: u32 = 5;        // sec
+pub const FREQ_DEF: u32 = 440;     // Hz
+const LOW_FREQ_TSP_DEF: i32 = 20;  // Hz
 const HIGH_FREQ_TSP_DEF: i32 = 16_000; // Hz
-const FS_DEF: u32 = 44_100; // Hz
+const FS_DEF: u32 = 44_100;        // Hz
+const LEN_TAPER_DEF: usize = 4096; //points
 
 /// A tool for generating WAV files of various signal types.
 #[derive(Parser, Debug)]
@@ -110,4 +111,19 @@ pub struct CommonOptions {
         default_value_t = FS_DEF,
     )]
     pub rate_of_sample: u32,
+
+    // length of taper
+    #[arg(
+        short, long,
+        default_value_t = LEN_TAPER_DEF,
+    )]
+    pub length_of_taper: usize,
+
+    // type of taper
+    #[arg(
+        long,
+        default_value = "linear",
+        value_parser = ["linear", "hann"]
+    )]
+    pub taper_type: String,
 }

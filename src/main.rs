@@ -24,6 +24,8 @@ fn main() {
         ch: common_options.channels.clone(),
         fs: common_options.rate_of_sample,
         d: duration,
+        taper_type: common_options.taper_type.clone(),
+        taper_len: common_options.length_of_taper,
     };
 
     if spec.ch == "L" {
