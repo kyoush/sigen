@@ -4,12 +4,18 @@ use std::path::Path;
 use std::io::{self, Write};
 use std::process::exit;
 
-const FS: u32 = 44_100; // Hz
 const N: usize = 4096; // samples of taper
 
 pub struct FileInfo {
     pub name: String,
     pub exists_msg: String,
+}
+
+pub struct SignalSpec {
+    pub amp: f64,
+    pub ch: String,
+    pub fs: u32,
+    pub d: u32,
 }
 
 fn apply_linear_fade_in (samples: &mut [f64], taper_size: usize) {
@@ -50,13 +56,13 @@ fn apply_linear_taper(samples: &mut [f64 ], taper_size: usize) {
     apply_linear_fade_out(samples, taper_size);
 }
 
-pub fn generate_sine_wave(amplitude: f64, duration: u32, frequency: u32) -> Vec<f64> {
-    let sample_count = (duration * FS) as usize;
+pub fn generate_sine_wave(spec: &SignalSpec, frequency: u32) -> Vec<f64> {
+    let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
     for i in 0..sample_count {
-        let t = i as f32 / FS as f32; // 現在のサンプルの時間
-        let sample = amplitude * (2.0 * PI * frequency as f32 * t).sin() as f64;
+        let t = i as f32 / spec.fs as f32; // 現在のサンプルの時間
+        let sample = spec.amp * (2.0 * PI * frequency as f32 * t).sin() as f64;
         // サンプルをクリップして i16 に変換
         samples.push(sample);
     }
@@ -65,12 +71,12 @@ pub fn generate_sine_wave(amplitude: f64, duration: u32, frequency: u32) -> Vec<
     samples
 }
 
-pub fn generate_white_noise(amplitude: f64, duration: u32) -> Vec<f64> {
-    let sample_count = (duration * FS) as usize;
+pub fn generate_white_noise(spec: &SignalSpec) -> Vec<f64> {
+    let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
     for _ in 0..sample_count {
-        let noise = amplitude * (rand::random::<f64>() * 2.0 - 1.0);
+        let noise = spec.amp * (rand::random::<f64>() * 2.0 - 1.0);
         samples.push(noise);
     }
 
@@ -78,28 +84,28 @@ pub fn generate_white_noise(amplitude: f64, duration: u32) -> Vec<f64> {
     samples
 }
 
-fn generate_linear_tsp(amplitude: f64, duration: f64, lowfreq: f64, highfreq: f64) -> Vec<f64> {
-    let sample_count = (duration as u32 * FS) as usize;
+fn generate_linear_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Vec<f64> {
+    let sample_count = (spec.d as u32 * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
     for n in 0..sample_count {
-        let t = n as f64 / FS as f64;
-        let phase = 2.0 * PI as f64 * (lowfreq * t + ((highfreq - lowfreq) / (2.0 * duration)) * t * t);
-        samples.push(amplitude * phase.sin());
+        let t = n as f64 / spec.fs as f64;
+        let phase = 2.0 * PI as f64 * (lowfreq * t + ((highfreq - lowfreq) / (2.0 * spec.d as f64)) * t * t);
+        samples.push(spec.amp * phase.sin());
     }
 
     samples
 }
 
-fn generate_log_tsp(amplitude: f64, duration: f64, lowfreq: f64, highfreq: f64) -> Vec<f64> {
-    let sample_count = (duration as u32 * FS) as usize;
+fn generate_log_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Vec<f64> {
+    let sample_count = (spec.d as u32 * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
     for n in 0..sample_count {
-        let t = n as f64 / FS as f64;
-        let freq = lowfreq * ((highfreq / lowfreq).powf(t / duration));
+        let t = n as f64 / spec.fs as f64;
+        let freq = lowfreq * ((highfreq / lowfreq).powf(t / spec.d as f64));
         let phase = 2.0 * PI as f64 * freq * t;
-        samples.push(amplitude * phase.sin());
+        samples.push(spec.amp * phase.sin());
     }
 
     let cutoff_index = (sample_count as f32 * 0.75) as usize;
@@ -111,13 +117,13 @@ fn generate_log_tsp(amplitude: f64, duration: f64, lowfreq: f64, highfreq: f64) 
     signal_vec
 }
 
-pub fn generate_tsp_signal(amplitude: f64, duration: u32, tsp_type: String, lowfreq: i32, highfreq: i32) -> Vec<f64> {
+pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: String, lowfreq: i32, highfreq: i32) -> Vec<f64> {
     let samples;
 
     if tsp_type == "linear" {
-        samples = generate_linear_tsp(amplitude, duration as f64, lowfreq as f64, highfreq as f64);
+        samples = generate_linear_tsp(&spec, lowfreq as f64, highfreq as f64);
     } else if tsp_type == "log" {
-        samples = generate_log_tsp(amplitude, duration as f64, lowfreq as f64, highfreq as f64);
+        samples = generate_log_tsp(&spec, lowfreq as f64, highfreq as f64);
     } else {
         eprintln!("Error: unexpected type of tsp signal");
         exit(1);
@@ -126,6 +132,7 @@ pub fn generate_tsp_signal(amplitude: f64, duration: u32, tsp_type: String, lowf
 }
 
 pub fn write_wav_file(
+    spec: &SignalSpec,
     filename: &str,
     samples: &[f64],
     channels: u32,
@@ -134,7 +141,7 @@ pub fn write_wav_file(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let spec = WavSpec {
         channels: channels as u16,
-        sample_rate: FS,
+        sample_rate: spec.fs,
         bits_per_sample: 16,
         sample_format: hound::SampleFormat::Int,
     };

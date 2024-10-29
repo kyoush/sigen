@@ -1,6 +1,6 @@
 use std::process::exit;
 use clap::Parser;
-use funcs::gen_file_name;
+use funcs::{gen_file_name, SignalSpec};
 
 mod args;
 mod funcs;
@@ -13,42 +13,49 @@ fn main() {
     let mut enable_r = true;
     let mut filename_ch = "";
 
-    let common_options = match &args.subcommand {
-        args::Commands::Sine { options, ..} => options,
-        args::Commands::White { options, ..} => options,
-        args::Commands::Tsp { options, ..} => options,
+    let (common_options, duration) = match &args.subcommand {
+        args::Commands::Sine { options, duration, ..} => (options, *duration),
+        args::Commands::White { options, duration, ..} => (options, *duration),
+        args::Commands::Tsp { options, duration, ..} => (options, *duration),
     };
 
-    if common_options.channels == "L" {
+    let spec = SignalSpec {
+        amp: common_options.amplitude,
+        ch: common_options.channels.clone(),
+        fs: common_options.rate_of_sample,
+        d: duration,
+    };
+
+    if spec.ch == "L" {
         enable_l = true;
         enable_r = false;
         filename_ch = "_l_only";
-    }else if common_options.channels == "R" {
+    }else if spec.ch == "R" {
         enable_l = false;
         enable_r = true;
         filename_ch = "_r_only";
-    }
+    };
 
     // generate signals
     let samples;
     let fileinfo;
     match args.subcommand {
-        args::Commands::Sine { frequency, duration, options } => {
-            fileinfo = gen_file_name("sine", frequency as i32, -1, filename_ch, duration);
-            samples = funcs::generate_sine_wave(options.amplitude, duration, frequency);
+        args::Commands::Sine { frequency, .. } => {
+            fileinfo = gen_file_name("sine", frequency as i32, -1, filename_ch, spec.d);
+            samples = funcs::generate_sine_wave(&spec, frequency);
         }
-        args::Commands::White { duration, options } => {
-            fileinfo = gen_file_name("white", -1, -1, filename_ch, duration);
-            samples = funcs::generate_white_noise(options.amplitude, duration);
+        args::Commands::White { .. } => {
+            fileinfo = gen_file_name("white", -1, -1, filename_ch, spec.d);
+            samples = funcs::generate_white_noise(&spec);
         }
-        args::Commands::Tsp { tsp_type, duration, startf, endf, options } => {
-            fileinfo = gen_file_name("tsp", startf, endf, filename_ch, duration);
-            samples = funcs::generate_tsp_signal(options.amplitude, duration, tsp_type, startf, endf);
+        args::Commands::Tsp { tsp_type, startf, endf, ..} => {
+            fileinfo = gen_file_name("tsp", startf, endf, filename_ch, spec.d);
+            samples = funcs::generate_tsp_signal(&spec, tsp_type, startf, endf);
         }
     }
 
     // write wav file
-    if let Err(e) = funcs::write_wav_file(&fileinfo.name, &samples, CH, enable_l, enable_r) {
+    if let Err(e) = funcs::write_wav_file(&spec, &fileinfo.name, &samples, CH, enable_l, enable_r) {
         eprintln!("Error writing WAV file: {}", e);
         exit(1);
     }

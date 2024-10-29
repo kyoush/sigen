@@ -6,6 +6,7 @@ const D_DEF_SHORT: u32 = 5; // sec
 pub const FREQ_DEF: u32 = 440; // Hz
 const LOW_FREQ_TSP_DEF: i32 = 20; // Hz
 const HIGH_FREQ_TSP_DEF: i32 = 16_000; // Hz
+const FS_DEF: u32 = 44_100; // Hz
 
 /// A tool for generating WAV files of various signal types.
 #[derive(Parser, Debug)]
@@ -102,4 +103,11 @@ pub struct CommonOptions {
         value_parser = ["L", "R", "LR"],
     )]
     pub channels: String,
+
+    // Sample Rate of signal
+    #[arg(
+        short, long,
+        default_value_t = FS_DEF,
+    )]
+    pub rate_of_sample: u32,
 }
