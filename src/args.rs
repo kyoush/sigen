@@ -86,6 +86,8 @@ pub enum Commands {
         #[command(flatten)]
         options: CommonOptions,
     },
+
+    // Wav{} // To be Extended
 }
 
 #[derive(Args, Debug)]

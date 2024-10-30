@@ -4,14 +4,12 @@ use rtaper;
 
 mod args;
 mod funcs;
+mod generate;
 
 const CH: u32 = 2; // stereo
 
 fn main() {
     let args = args::Cli::parse();
-    let mut enable_l = true;
-    let mut enable_r = true;
-    let mut filename_ch = "";
 
     let (common_options, duration) = match &args.subcommand {
         args::Commands::Sine { options, duration, ..} => (options, *duration),
@@ -24,7 +22,7 @@ fn main() {
         taper_length: common_options.length_of_taper,
     };
 
-    let spec = funcs::SignalSpec {
+    let spec = crate::generate::SignalSpec {
         amp: common_options.amplitude,
         ch: common_options.channels.clone(),
         fs: common_options.rate_of_sample,
@@ -32,6 +30,9 @@ fn main() {
         taper_spec: taper_spec,
     };
 
+    let enable_l;
+    let enable_r;
+    let filename_ch;
     match spec.ch.as_str() {
         "L" => {
             enable_l = true;
@@ -43,7 +44,11 @@ fn main() {
             enable_r = true;
             filename_ch = "_r_only";
         },
-        "LR" => {},
+        "LR" => {
+            enable_l = true;
+            enable_r = true;
+            filename_ch = "";
+        },
         _ => {
             eprintln!("Error: unknown type of channels");
             exit(1);
@@ -56,15 +61,15 @@ fn main() {
     match args.subcommand {
         args::Commands::Sine { frequency, .. } => {
             fileinfo = funcs::gen_file_name("sine", frequency as i32, -1, filename_ch, spec.d);
-            samples = funcs::generate_sine_wave(&spec, frequency);
+            samples = generate::generate_sine_wave(&spec, frequency);
         }
         args::Commands::White { .. } => {
             fileinfo = funcs::gen_file_name("white", -1, -1, filename_ch, spec.d);
-            samples = funcs::generate_white_noise(&spec);
+            samples = generate::generate_white_noise(&spec);
         }
         args::Commands::Tsp { tsp_type, startf, endf, ..} => {
             fileinfo = funcs::gen_file_name("tsp", startf, endf, filename_ch, spec.d);
-            samples = funcs::generate_tsp_signal(&spec, tsp_type, startf, endf);
+            samples = generate::generate_tsp_signal(&spec, tsp_type, startf, endf);
         }
     }
 
