@@ -123,9 +123,9 @@ pub struct CommonOptions {
 
     // type of taper
     #[arg(
-        long,
+        short, long,
         default_value = "linear",
-        value_parser = ["linear", "hann"]
+        value_parser = ["linear", "hann", "cos"]
     )]
-    pub taper_type: String,
+    pub window_type: String,
 }

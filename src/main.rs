@@ -16,9 +16,16 @@ fn main() {
         args::Commands::White { options, duration, ..} => (options, *duration),
         args::Commands::Tsp { options, duration, ..} => (options, *duration),
     };
+
+    let taper_type = match common_options.window_type.as_str() {
+        "linear" => { rtaper::WindowType::Linear }
+        "hann" => { rtaper::WindowType::Hann }
+        "cos" => { rtaper::WindowType::Cosine }
+        _ => { rtaper::WindowType::Hann }
+    };
     
     let taper_spec = rtaper::TaperSpec {
-        taper_type: common_options.taper_type.clone(),
+        taper_type: taper_type,
         taper_length: common_options.length_of_taper,
     };
 

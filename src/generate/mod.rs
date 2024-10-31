@@ -19,9 +19,10 @@ pub fn generate_sine_wave(spec: &SignalSpec, frequency: u32) -> Vec<f64> {
         samples.push(sample);
     }
 
-    if let Err(e) = rtaper::apply_taper(&mut samples, &spec.taper_spec) {
+    if let Err(e) = rtaper::apply_taper_both(&mut samples, &spec.taper_spec) {
         eprintln!("failed to apply taper: {}", e);
     }
+
     samples
 }
 
@@ -34,9 +35,10 @@ pub fn generate_white_noise(spec: &SignalSpec) -> Vec<f64> {
         samples.push(noise);
     }
 
-    if let Err(e) = rtaper::apply_taper(&mut samples, &spec.taper_spec) {
+    if let Err(e) = rtaper::apply_taper_both(&mut samples, &spec.taper_spec) {
         eprintln!("failed to apply taper: {}", e);
     }
+
     samples
 }
 
@@ -81,6 +83,9 @@ pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: String, lowfreq: i32, hi
         eprintln!("Error: unexpected type of tsp signal");
         exit(1);
     }
-    rtaper::hann::apply_hanning_fade_out(&mut samples, spec.taper_spec.taper_length);
+    if let Err(e) = rtaper::apply_taper_fade_out(&mut samples, &spec.taper_spec) {
+        eprintln!("failed to apply taper: {}", e);
+    }
+
     samples
 }
