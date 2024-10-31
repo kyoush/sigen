@@ -21,6 +21,7 @@ fn main() {
         "linear" => { rtaper::WindowType::Linear }
         "hann" => { rtaper::WindowType::Hann }
         "cos" => { rtaper::WindowType::Cosine }
+        "blackman" => { rtaper::WindowType::Blackman }
         _ => { rtaper::WindowType::Hann }
     };
     

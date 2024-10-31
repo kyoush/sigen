@@ -125,7 +125,7 @@ pub struct CommonOptions {
     #[arg(
         short, long,
         default_value = "linear",
-        value_parser = ["linear", "hann", "cos"]
+        value_parser = ["linear", "hann", "cos", "blackman"]
     )]
     pub window_type: String,
 }
