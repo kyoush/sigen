@@ -1,12 +1,12 @@
 use std::f32::consts::PI;
 use std::process::exit;
 
-pub struct SignalSpec {
-    pub amp: f64,
-    pub ch: String,
-    pub fs: u32,
-    pub d: u32,
-    pub taper_spec: rtaper::TaperSpec,
+use crate::SignalSpec;
+
+pub fn apply_taper_to_wav() {
+    samples = read_wave_file;
+    rtaper::apply_taper_both();
+    fileinfo = 
 }
 
 pub fn generate_sine_wave(spec: &SignalSpec, frequency: u32) -> Vec<f64> {
