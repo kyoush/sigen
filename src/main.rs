@@ -2,22 +2,30 @@ use std::process::exit;
 use clap::Parser;
 use rtaper;
 
-mod args;
-mod funcs;
-mod generate;
+mod commands;
+mod fileio;
+mod processing;
 
 const CH: u32 = 2; // stereo
 
-fn main() {
-    let args = args::Cli::parse();
+pub struct SignalSpec {
+    pub amp: f64,
+    pub ch: String,
+    pub fs: u32,
+    pub d: u32,
+    pub taper_spec: rtaper::TaperSpec,
+}
 
-    let (common_options, duration) = match &args.subcommand {
-        args::Commands::Sine { options, duration, ..} => (options, *duration),
-        args::Commands::White { options, duration, ..} => (options, *duration),
-        args::Commands::Tsp { options, duration, ..} => (options, *duration),
+fn main() {
+    let args = commands::Cli::parse();
+
+    let (common_options, taper_options, duration) = match &args.subcommand {
+        commands::Commands::Sine(sine_options) => (Some(sine_options.options.clone()), &sine_options.taper_opt, sine_options.duration),
+        commands::Commands::White(white_options) => (Some(white_options.options.clone()), &white_options.taper_opt, white_options.duration),
+        commands::Commands::Tsp(tsp_options) => (Some(tsp_options.options.clone()), &tsp_options.taper_opt, tsp_options.duration),
     };
 
-    let taper_type = match common_options.window_type.as_str() {
+    let taper_type = match taper_options.window_type.as_str() {
         "linear" => { rtaper::WindowType::Linear }
         "hann" => { rtaper::WindowType::Hann }
         "cos" => { rtaper::WindowType::Cosine }
@@ -27,62 +35,53 @@ fn main() {
     
     let taper_spec = rtaper::TaperSpec {
         taper_type: taper_type,
-        taper_length: common_options.length_of_taper,
+        taper_length: taper_options.length_of_taper,
     };
 
-    let spec = crate::generate::SignalSpec {
-        amp: common_options.amplitude,
-        ch: common_options.channels.clone(),
-        fs: common_options.rate_of_sample,
-        d: duration,
-        taper_spec: taper_spec,
-    };
 
-    let enable_l;
-    let enable_r;
-    let filename_ch;
-    match spec.ch.as_str() {
-        "L" => {
-            enable_l = true;
-            enable_r = false;
-            filename_ch = "_l_only";
-        },
-        "R" => {
-            enable_l = false;
-            enable_r = true;
-            filename_ch = "_r_only";
-        },
-        "LR" => {
-            enable_l = true;
-            enable_r = true;
-            filename_ch = "";
-        },
-        _ => {
-            eprintln!("Error: unknown type of channels");
-            exit(1);
+    let (spec, enable_l, enable_r, filename_ch) = if let Some(common_options) = common_options {
+        let spec = SignalSpec {
+            amp: common_options.amplitude,
+            ch: common_options.channels.clone(),
+            fs: common_options.rate_of_sample,
+            d: duration,
+            taper_spec: taper_spec,
+        };
+
+        match spec.ch.as_str() {
+            "L" => (spec, true, false, "l_only"),
+            "R" => (spec, false, true, "_r_only"),
+            "LR" => (spec, true, true, ""),
+            _ => {
+                eprintln!("Error: unknown spec ch error");
+                exit(1);
+            }
         }
-    }
+    }else {
+        eprintln!("Error: common_options is not set");
+        exit(1);
+    };
 
     // generate signals
     let samples;
     let fileinfo;
     match args.subcommand {
-        args::Commands::Sine { frequency, .. } => {
-            fileinfo = funcs::gen_file_name("sine", frequency as i32, -1, filename_ch, spec.d);
-            samples = generate::generate_sine_wave(&spec, frequency);
+        commands::Commands::Sine(sine_options) => {
+            fileinfo = fileio::gen_file_name("sine", sine_options.frequency as i32, -1, filename_ch, spec.d);
+            samples = processing::generate_sine_wave(&spec, sine_options.frequency);
         }
-        args::Commands::White { .. } => {
-            fileinfo = funcs::gen_file_name("white", -1, -1, filename_ch, spec.d);
-            samples = generate::generate_white_noise(&spec);
+        commands::Commands::White(_) => {
+            fileinfo = fileio::gen_file_name("white", -1, -1, filename_ch, spec.d);
+            samples = processing::generate_white_noise(&spec);
         }
-        args::Commands::Tsp { tsp_type, startf, endf, ..} => {
-            fileinfo = funcs::gen_file_name("tsp", startf, endf, filename_ch, spec.d);
-            samples = generate::generate_tsp_signal(&spec, tsp_type, startf, endf);
+        commands::Commands::Tsp(tsp_options) => {
+            fileinfo = fileio::gen_file_name("tsp", tsp_options.startf, tsp_options.endf, filename_ch, spec.d);
+            samples = processing::generate_tsp_signal(&spec, tsp_options.tsp_type, tsp_options.startf, tsp_options.endf);
         }
     }
 
     // write wav file
-    if let Err(e) = funcs::write_wav_file(&spec, &fileinfo.name, &samples, CH, enable_l, enable_r) {
+    if let Err(e) = fileio::wavwrite::write_wav_file(spec.fs, &fileinfo.name, &samples, CH, enable_l, enable_r) {
         eprintln!("Error writing WAV file: {}", e);
         exit(1);
     }
