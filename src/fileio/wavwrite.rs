@@ -1,4 +1,5 @@
 use hound::{WavSpec, WavWriter};
+use std::error::Error;
 
 pub fn write_wav_file(
     spec: WavSpec,
@@ -6,7 +7,7 @@ pub fn write_wav_file(
     samples: &[Vec<f64>],
     enable_l: bool,
     enable_r: bool,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn Error>> {
     let mut writer = WavWriter::create(filename, spec)?;
 
     let total_samples = samples[0].len();
