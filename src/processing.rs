@@ -2,6 +2,7 @@ use std::f32::consts::PI;
 use std::process::exit;
 
 use crate::SignalSpec;
+use crate::fileio::{wavwrite, wavread};
 
 pub fn apply_taper_to_wav() {
     samples = read_wave_file;
