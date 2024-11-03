@@ -2,7 +2,7 @@ use std::path::Path;
 use std::io::{self, Write};
 use std::process::exit;
 
-// pub mod wavread;
+pub mod wavread;
 pub mod wavwrite;
 
 pub struct FileInfo {
