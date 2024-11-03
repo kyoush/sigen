@@ -1,29 +1,29 @@
 use hound::{WavSpec, WavWriter};
 
 pub fn write_wav_file(
-    fs: u32,
+    spec: WavSpec,
     filename: &str,
-    samples: &[f64],
-    channels: u32,
+    samples: &[Vec<f64>],
     enable_l: bool,
     enable_r: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let spec = WavSpec {
-        channels: channels as u16,
-        sample_rate: fs,
-        bits_per_sample: 16,
-        sample_format: hound::SampleFormat::Int,
-    };
-
     let mut writer = WavWriter::create(filename, spec)?;
 
-    let total_samples = samples.len();
+    let total_samples = samples[0].len();
+    let num_ch = samples.len();
 
     for i in 0..total_samples {
-        let sample_value: i16 =
-            (samples[i] * i16::MAX as f64).clamp(i16::MIN as f64, i16::MAX as f64) as i16;
-        writer.write_sample(sample_value * (enable_l as i16))?;
-        writer.write_sample(sample_value * (enable_r as i16))?;
+        for j in 0 .. num_ch {
+            let enable = if num_ch % 2 == 0 {
+                enable_l as i16
+            }else {
+                enable_r as i16
+            };
+
+            let sample_value: i16 =
+            (samples[j][i] * i16::MAX as f64).clamp(i16::MIN as f64, i16::MAX as f64) as i16;
+            writer.write_sample(sample_value * enable)?;
+        }
     }
 
     writer.flush()?;
