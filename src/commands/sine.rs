@@ -20,5 +20,5 @@ pub struct SineOptions {
     pub options: super::common::CommonOptions,
 
     #[command(flatten)]
-    pub taper_opt: super::common::TaperSpec,
+    pub taper_opt: super::common::TaperSpecOptions,
 }
