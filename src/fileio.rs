@@ -78,3 +78,14 @@ pub fn gen_file_name(sig_type: &str, start_freq: i32, end_freq: i32, filename_ch
         exists_msg: override_msg,
     }
 }
+
+pub fn set_output_filename(input_filename: &str) -> String {
+    let stem = Path::new(input_filename)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("");
+
+    let output_filename = format!("{}_tapered.wav", stem);
+    
+    output_filename
+}
