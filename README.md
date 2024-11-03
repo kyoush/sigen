@@ -2,6 +2,8 @@
 
 ![](https://img.shields.io/github/repo-size/kyoush/sigen)
 ![](https://img.shields.io/github/languages/code-size/kyoush/sigen)
+![](https://img.shields.io/github/v/release/kyoush/sigen)
+![](https://img.shields.io/github/license/kyoush/sigen)
 
 A tool for generating WAV files of various signal types. \
 You can control parameters such as length, frequency, and channels through command-line arguments.
