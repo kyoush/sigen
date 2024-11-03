@@ -125,3 +125,7 @@ WAV file "tsp_500hz_to_5khz_1s.wav" created successfully
 # tapering to sine_440hz_30.wav
 $ sigen taper sine_440hz_30s.wav
 ```
+
+## License
+This project is licensed under the terms of the GNU General Public License, version 2 (GPL-2.0).  
+See the [LICENSE](./LICENSE) file for details.

@@ -2,6 +2,8 @@
 name = "signal-generator"
 version = "0.1.0"
 edition = "2021"
+authors = ["Kyoshiro Kamura <kyoshiro.kamura@gmail.com>"]
+license = "GPL-2.0-only"
 
 [[bin]]
 name = "sigen"
