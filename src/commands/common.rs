@@ -26,9 +26,9 @@ pub struct CommonOptions {
 }
 
 #[derive(Args, Debug)]
-pub struct TaperSpec {
+pub struct TaperSpecOptions {
     /// length of taper
-    /// ゼロを渡したら、テーパー処理が無効化されます
+    /// set this to zero to disable tapering
     #[arg(
         short, long,
         default_value_t = super::LEN_TAPER_DEF,
