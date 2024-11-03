@@ -22,9 +22,26 @@ fn main() {
     let args = commands::Cli::parse();
 
     let (common_options, taper_options, duration) = match &args.subcommand {
-        commands::Commands::Sine(sine_options) => (Some(sine_options.options.clone()), &sine_options.taper_opt, sine_options.duration),
-        commands::Commands::White(white_options) => (Some(white_options.options.clone()), &white_options.taper_opt, white_options.duration),
-        commands::Commands::Tsp(tsp_options) => (Some(tsp_options.options.clone()), &tsp_options.taper_opt, tsp_options.duration),
+        commands::Commands::Sine(sine_options) => (
+            Some(sine_options.options.clone()),
+            &sine_options.taper_opt,
+            sine_options.duration,
+        ),
+        commands::Commands::White(white_options) => (
+            Some(white_options.options.clone()),
+            &white_options.taper_opt,
+            white_options.duration,
+        ),
+        commands::Commands::Tsp(tsp_options) => (
+            Some(tsp_options.options.clone()),
+            &tsp_options.taper_opt,
+            tsp_options.duration,
+        ),
+        commands::Commands::Taper(taper_options) => (
+            None,
+            &taper_options.taper_opt,
+            0,
+        ),
     };
 
     let taper_type = match taper_options.window_type.as_str() {
@@ -39,6 +56,14 @@ fn main() {
         taper_type: taper_type,
         taper_length: taper_options.length_of_taper,
     };
+
+    if let commands::Commands::Taper(taper_options) = &args.subcommand {
+        if let Err(e) = processing::apply_taper_to_wav(&taper_options.filename.clone(), &taper_spec) {
+            eprintln!("error: faild to apply taper: {}", e);
+            exit(1);
+        }
+        exit(0);
+    }
 
     let (signal_spec, enable_l, enable_r, filename_ch) = if let Some(common_options) = common_options {
         let signal_spec = SignalSpec {

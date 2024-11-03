@@ -4,6 +4,7 @@ pub mod common;
 pub mod sine;
 pub mod white;
 pub mod tsp;
+pub mod taper;
 
 pub const AMP_DEF: f64 = 0.45;
 pub const D_DEF_LONG: u32 = 30;        // sec
@@ -32,6 +33,9 @@ pub enum Commands {
 
     /// generate a wave file with a TSP [Time Stretched Pulse] waveform
     Tsp (tsp::TspOptions),
+
+    /// apply taper processing on existing wav file
+    Taper(taper::TaperOptions),
 
     // Wav(wav::WavOptions), // To be Extended
 }
