@@ -10,6 +10,14 @@ pub struct FileInfo {
     pub exists_msg: String,
 }
 
+fn is_file_exist(filename: &str) -> bool {
+    let exists = Path::new(filename).exists();
+    if exists{
+        println!("The file [{}] already exists", filename);
+    }
+    exists
+}
+
 fn file_override_check(filename: &str) -> Result<(), Box<dyn Error>> {
     let mut input = String::new();
     print!("The file [{}] will be overridden. Are you sure? [y/N] ", filename);
@@ -71,6 +79,7 @@ pub fn gen_file_name(sig_type: &str, start_freq: i32, end_freq: i32, filename_ch
 
     let mut override_msg = String::new();
     if Path::new(&filename).exists() {
+        println!("ファイルがすでに存在します。というメッセージだしたい");
         file_override_check(&filename)?;
         override_msg = " (file override)".to_string();
     }
@@ -84,19 +93,26 @@ pub fn gen_file_name(sig_type: &str, start_freq: i32, end_freq: i32, filename_ch
 pub fn set_output_filename(output_filename: Option<Option<String>>, input_filename: &str) -> Result<String, Box<dyn Error>> {
     match output_filename {
         Some(Some(ref name)) if !name.is_empty() => {
-            println!("user specified output filename will use!");
+            if is_file_exist(name) {
+                file_override_check(name)?;
+            }
             Ok(name.clone()) // @todo .wavの拡張子がついているかチェックを追加する
         }
         Some(Some(_)) => {
             return Err("The output filename is empty!".into());
         }
         Some(None) => {
-            file_override_check(input_filename)?;
+            if is_file_exist(input_filename) {
+                file_override_check(input_filename)?;
+            }
             Ok(input_filename.to_string())
         }
         None => {
-            println!("default filename will use");
-            Ok(format!("{}_tapered.wav", extract_stem(input_filename)).to_string())
+            let default_name = format!("{}_tapered.wav", extract_stem(input_filename));
+            if is_file_exist(&default_name) {
+                file_override_check(&default_name)?;
+            }
+            Ok(default_name)
         }
     }
 }
