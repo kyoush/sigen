@@ -1,12 +1,14 @@
 use std::process::exit;
 use clap::Parser;
 use rtaper;
+use hound::WavSpec;
 
 mod commands;
 mod fileio;
 mod processing;
 
-const CH: u32 = 2; // stereo
+const CH: u16 = 2; // stereo
+const BITS_PER_SAMPLE: u16 = 16;
 
 pub struct SignalSpec {
     pub amp: f64,
@@ -38,9 +40,8 @@ fn main() {
         taper_length: taper_options.length_of_taper,
     };
 
-
-    let (spec, enable_l, enable_r, filename_ch) = if let Some(common_options) = common_options {
-        let spec = SignalSpec {
+    let (signal_spec, enable_l, enable_r, filename_ch) = if let Some(common_options) = common_options {
+        let signal_spec = SignalSpec {
             amp: common_options.amplitude,
             ch: common_options.channels.clone(),
             fs: common_options.rate_of_sample,
@@ -48,10 +49,10 @@ fn main() {
             taper_spec: taper_spec,
         };
 
-        match spec.ch.as_str() {
-            "L" => (spec, true, false, "l_only"),
-            "R" => (spec, false, true, "_r_only"),
-            "LR" => (spec, true, true, ""),
+        match signal_spec.ch.as_str() {
+            "L" => (signal_spec, true, false, "l_only"),
+            "R" => (signal_spec, false, true, "_r_only"),
+            "LR" => (signal_spec, true, true, ""),
             _ => {
                 eprintln!("Error: unknown spec ch error");
                 exit(1);
@@ -67,21 +68,34 @@ fn main() {
     let fileinfo;
     match args.subcommand {
         commands::Commands::Sine(sine_options) => {
-            fileinfo = fileio::gen_file_name("sine", sine_options.frequency as i32, -1, filename_ch, spec.d);
-            samples = processing::generate_sine_wave(&spec, sine_options.frequency);
+            fileinfo = fileio::gen_file_name("sine", sine_options.frequency as i32, -1, filename_ch, signal_spec.d);
+            samples = processing::generate_sine_wave(&signal_spec, sine_options.frequency);
         }
         commands::Commands::White(_) => {
-            fileinfo = fileio::gen_file_name("white", -1, -1, filename_ch, spec.d);
-            samples = processing::generate_white_noise(&spec);
+            fileinfo = fileio::gen_file_name("white", -1, -1, filename_ch, signal_spec.d);
+            samples = processing::generate_white_noise(&signal_spec);
         }
         commands::Commands::Tsp(tsp_options) => {
-            fileinfo = fileio::gen_file_name("tsp", tsp_options.startf, tsp_options.endf, filename_ch, spec.d);
-            samples = processing::generate_tsp_signal(&spec, tsp_options.tsp_type, tsp_options.startf, tsp_options.endf);
+            fileinfo = fileio::gen_file_name("tsp", tsp_options.startf, tsp_options.endf, filename_ch, signal_spec.d);
+            samples = processing::generate_tsp_signal(&signal_spec, tsp_options.tsp_type, tsp_options.startf, tsp_options.endf);
+        }
+        _ => {
+            eprintln!("Error: unexpected command type");
+            exit(1);
         }
     }
 
     // write wav file
-    if let Err(e) = fileio::wavwrite::write_wav_file(spec.fs, &fileinfo.name, &samples, CH, enable_l, enable_r) {
+    let wav_spec = WavSpec {
+        channels: CH,
+        sample_rate: signal_spec.fs,
+        bits_per_sample: BITS_PER_SAMPLE,
+        sample_format: hound::SampleFormat::Int,
+    };
+
+    let samples_to_write = [samples.clone(), samples];
+
+    if let Err(e) = fileio::wavwrite::write_wav_file(wav_spec, &fileinfo.name, &samples_to_write, enable_l, enable_r) {
         eprintln!("Error writing WAV file: {}", e);
         exit(1);
     }
