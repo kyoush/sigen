@@ -2,18 +2,18 @@ use std::f32::consts::PI;
 use std::process::exit;
 use std::error::Error;
 use rtaper::TaperSpec;
+use crate::commands::taper::TaperOptions;
 use crate::SignalSpec;
 use crate::fileio::{wavwrite, wavread};
 
-pub fn apply_taper_to_wav(filename: &str, taper_spec: &TaperSpec) -> Result<(), Box<dyn Error>> {
-    let (mut samples, spec) = wavread::read_wav_file(filename)?;
-
+pub fn apply_taper_to_wav(options: &TaperOptions, taper_spec: &TaperSpec) -> Result<(), Box<dyn Error>> {
+    let (mut samples, spec) = wavread::read_wav_file(options.input.as_str())?;
     let num_ch = samples.len();
     for i in 0..num_ch {
-        rtaper::apply_taper_both(&mut samples[i], taper_spec)?;
+        rtaper::apply_taper_both(&mut samples[i], &taper_spec)?;
     }
 
-    let output_filename = crate::fileio::set_output_filename(filename);
+    let output_filename = crate::fileio::set_output_filename(options.output.clone(), options.input.as_str())?;
     wavwrite::write_wav_file(spec, output_filename.as_str(), &samples, true, true)?;
 
     Ok(())

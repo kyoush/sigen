@@ -1,7 +1,7 @@
-use std::process::exit;
 use clap::Parser;
 use rtaper;
 use hound::WavSpec;
+use std::error::Error;
 
 mod commands;
 mod fileio;
@@ -18,7 +18,7 @@ pub struct SignalSpec {
     pub taper_spec: rtaper::TaperSpec,
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let args = commands::Cli::parse();
 
     let (common_options, taper_options, duration) = match &args.subcommand {
@@ -58,34 +58,32 @@ fn main() {
     };
 
     if let commands::Commands::Taper(taper_options) = &args.subcommand {
-        if let Err(e) = processing::apply_taper_to_wav(&taper_options.filename.clone(), &taper_spec) {
-            eprintln!("error: faild to apply taper: {}", e);
-            exit(1);
-        }
-        exit(0);
+        processing::apply_taper_to_wav(&taper_options, &taper_spec)?;
+        return Ok(());
     }
 
-    let (signal_spec, enable_l, enable_r, filename_ch) = if let Some(common_options) = common_options {
-        let signal_spec = SignalSpec {
-            amp: common_options.amplitude,
-            ch: common_options.channels.clone(),
-            fs: common_options.rate_of_sample,
-            d: duration,
-            taper_spec: taper_spec,
-        };
+    let (signal_spec, enable_l, enable_r, filename_ch) = match common_options {
+        Some(common_options) =>  {
+            let signal_spec = SignalSpec {
+                amp: common_options.amplitude,
+                ch: common_options.channels.clone(),
+                fs: common_options.rate_of_sample,
+                d: duration,
+                taper_spec: taper_spec,
+            };
 
-        match signal_spec.ch.as_str() {
-            "L" => (signal_spec, true, false, "l_only"),
-            "R" => (signal_spec, false, true, "_r_only"),
-            "LR" => (signal_spec, true, true, ""),
-            _ => {
-                eprintln!("Error: unknown spec ch error");
-                exit(1);
+            match signal_spec.ch.as_str() {
+                "L" => (signal_spec, true, false, "l_only"),
+                "R" => (signal_spec, false, true, "_r_only"),
+                "LR" => (signal_spec, true, true, ""),
+                _ => {
+                    return Err("unknown spec ch error".into());
+                }
             }
+        },
+        None => {
+           return Err("common_options is not set".into());
         }
-    }else {
-        eprintln!("Error: common_options is not set");
-        exit(1);
     };
 
     // generate signals
@@ -93,20 +91,19 @@ fn main() {
     let fileinfo;
     match args.subcommand {
         commands::Commands::Sine(sine_options) => {
-            fileinfo = fileio::gen_file_name("sine", sine_options.frequency as i32, -1, filename_ch, signal_spec.d);
+            fileinfo = fileio::gen_file_name("sine", sine_options.frequency as i32, -1, filename_ch, signal_spec.d)?;
             samples = processing::generate_sine_wave(&signal_spec, sine_options.frequency);
         }
         commands::Commands::White(_) => {
-            fileinfo = fileio::gen_file_name("white", -1, -1, filename_ch, signal_spec.d);
+            fileinfo = fileio::gen_file_name("white", -1, -1, filename_ch, signal_spec.d)?;
             samples = processing::generate_white_noise(&signal_spec);
         }
         commands::Commands::Tsp(tsp_options) => {
-            fileinfo = fileio::gen_file_name("tsp", tsp_options.startf, tsp_options.endf, filename_ch, signal_spec.d);
+            fileinfo = fileio::gen_file_name("tsp", tsp_options.startf, tsp_options.endf, filename_ch, signal_spec.d)?;
             samples = processing::generate_tsp_signal(&signal_spec, tsp_options.tsp_type, tsp_options.startf, tsp_options.endf);
         }
         _ => {
-            eprintln!("Error: unexpected command type");
-            exit(1);
+            return Err("unexpected command type".into());
         }
     }
 
@@ -120,11 +117,9 @@ fn main() {
 
     let samples_to_write = [samples.clone(), samples];
 
-    if let Err(e) = fileio::wavwrite::write_wav_file(wav_spec, &fileinfo.name, &samples_to_write, enable_l, enable_r) {
-        eprintln!("Error writing WAV file: {}", e);
-        exit(1);
-    }
+    fileio::wavwrite::write_wav_file(wav_spec, &fileinfo.name, &samples_to_write, enable_l, enable_r)?;
 
     println!("WAV file \"{}\" created successfully{}", fileinfo.name, fileinfo.exists_msg);
-    exit(0);
+
+    Ok(())
 }

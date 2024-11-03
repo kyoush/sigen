@@ -1,6 +1,6 @@
 use std::path::Path;
 use std::io::{self, Write};
-use std::process::exit;
+use std::error::Error;
 
 pub mod wavread;
 pub mod wavwrite;
@@ -10,31 +10,22 @@ pub struct FileInfo {
     pub exists_msg: String,
 }
 
-fn file_exists_errorcheck(filename: &String) -> String {
-    let mut override_msg = String::new();
-    if Path::new(&filename).exists() {
-        print!("file \"{}\" is already exists, override? [y/N] ", filename);
-
-        let mut input = String::new();
-        io::stdout().flush().unwrap();
-        if io::stdin().read_line(&mut input).is_err() {
-            eprintln!("Error: reading input. Exiting...");
-            exit(1);
-        }
-
-        match input.trim().to_lowercase().as_str() {
-            "n" | "no" | "" => {
-                eprintln!("Abort! The operation was canceled by the user.");
-                eprintln!("No output was generated.");
-                exit(1);
-            }
-            _ => {
-                override_msg = " (file override)".to_string();
-            }
-        }
+fn file_override_check(filename: &str) -> Result<(), Box<dyn Error>> {
+    let mut input = String::new();
+    print!("The file [{}] will be overridden. Are you sure? [y/N] ", filename);
+    io::stdout().flush().unwrap();
+    if io::stdin().read_line(&mut input).is_err() {
+        return Err("failed to reading input".into());
     }
 
-    override_msg
+    match input.trim().to_lowercase().as_str() {
+        "y" | "yes" => {
+            Ok(())
+        }
+        _=> {
+            return Err("The operation was canceled by user.".into());
+        }
+    }
 }
 
 fn freq_format(freq: i32, prefix: &str) -> String {
@@ -61,7 +52,14 @@ fn seconds_format(sec: u32) -> String{
     }
 }
 
-pub fn gen_file_name(sig_type: &str, start_freq: i32, end_freq: i32, filename_ch: &str, d: u32) -> FileInfo {
+fn extract_stem(input_filename: &str) -> String {
+    Path::new(input_filename)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("").to_string()
+}
+
+pub fn gen_file_name(sig_type: &str, start_freq: i32, end_freq: i32, filename_ch: &str, d: u32) -> Result<FileInfo, Box<dyn Error>> {
     let filename_start_freq = freq_format(start_freq, "");
     let filename_end_freq = freq_format(end_freq, "to_");
     let filename_duration = seconds_format(d);
@@ -71,21 +69,34 @@ pub fn gen_file_name(sig_type: &str, start_freq: i32, end_freq: i32, filename_ch
         sig_type, filename_start_freq, filename_end_freq, filename_duration, filename_ch
     );
 
-    let override_msg = file_exists_errorcheck(&filename);
+    let mut override_msg = String::new();
+    if Path::new(&filename).exists() {
+        file_override_check(&filename)?;
+        override_msg = " (file override)".to_string();
+    }
 
-    FileInfo {
+    Ok(FileInfo {
         name: filename,
         exists_msg: override_msg,
-    }
+    })
 }
 
-pub fn set_output_filename(input_filename: &str) -> String {
-    let stem = Path::new(input_filename)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("");
-
-    let output_filename = format!("{}_tapered.wav", stem);
-    
-    output_filename
+pub fn set_output_filename(output_filename: Option<Option<String>>, input_filename: &str) -> Result<String, Box<dyn Error>> {
+    match output_filename {
+        Some(Some(ref name)) if !name.is_empty() => {
+            println!("user specified output filename will use!");
+            Ok(name.clone()) // @todo .wavの拡張子がついているかチェックを追加する
+        }
+        Some(Some(_)) => {
+            return Err("The output filename is empty!".into());
+        }
+        Some(None) => {
+            file_override_check(input_filename)?;
+            Ok(input_filename.to_string())
+        }
+        None => {
+            println!("default filename will use");
+            Ok(format!("{}_tapered.wav", extract_stem(input_filename)).to_string())
+        }
+    }
 }
