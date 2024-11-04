@@ -64,7 +64,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let (signal_spec, enable_l, enable_r, filename_ch) = match common_options {
-        Some(common_options) =>  {
+        Some(ref common_options) =>  {
             let signal_spec = SignalSpec {
                 amp: common_options.amplitude,
                 ch: common_options.channels.clone(),
@@ -93,6 +93,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     match args.subcommand {
         commands::Commands::Sine(sine_options) => {
             fileinfo = fileio::gen_file_name(
+                &common_options.unwrap().output_filename,
                 "sine",
                 sine_options.frequency as i32,
                 -1, filename_ch,
@@ -102,6 +103,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
         commands::Commands::White(_) => {
             fileinfo = fileio::gen_file_name(
+                &common_options.unwrap().output_filename,
                 "white",
                 -1,
                 -1,
@@ -112,6 +114,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
         commands::Commands::Tsp(tsp_options) => {
             fileinfo = fileio::gen_file_name(
+                &common_options.unwrap().output_filename,
                 "tsp",
                 tsp_options.startf,
                 tsp_options.endf,

@@ -17,12 +17,18 @@ pub struct CommonOptions {
     )]
     pub channels: String,
 
-    // Sample Rate of signal
+    /// Sample Rate of signal
     #[arg(
         short, long,
         default_value_t = super::FS_DEF,
     )]
     pub rate_of_sample: u32,
+
+    /// Output Filename
+    #[arg(
+        short, long,
+    )]
+    pub output_filename: Option<String>,
 }
 
 #[derive(Args, Debug)]
