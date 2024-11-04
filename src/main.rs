@@ -9,6 +9,8 @@ mod processing;
 
 const CH: u16 = 2; // stereo
 const BITS_PER_SAMPLE: u16 = 16;
+const AMP_MIN: f64 = 0.0;
+const AMP_MAX: f64 = 1.0;
 
 pub struct SignalSpec {
     pub amp: f64,
@@ -66,7 +68,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let (signal_spec, enable_l, enable_r, filename_ch) = match common_options {
         Some(ref common_options) =>  {
             let signal_spec = SignalSpec {
-                amp: common_options.amplitude,
+                amp: processing::value_verify(common_options.amplitude, AMP_MIN, AMP_MAX),
                 ch: common_options.channels.clone(),
                 fs: common_options.rate_of_sample,
                 d: duration,
