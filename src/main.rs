@@ -97,7 +97,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             fileinfo = fileio::gen_file_name(
                 &common_options.unwrap().output_filename,
                 "sine",
-                sine_options.frequency as i32,
+                sine_options.frequency as i32, // @todo 値の範囲チェック結果をファイル名にも反映するようにする
                 -1, filename_ch,
                 signal_spec.d
             )?;
@@ -118,8 +118,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             fileinfo = fileio::gen_file_name(
                 &common_options.unwrap().output_filename,
                 "tsp",
-                tsp_options.startf,
-                tsp_options.endf,
+                tsp_options.startf, // @todo 値の範囲チェック結果をファイル名にも反映するようにする
+                tsp_options.endf, // @todo 値の範囲チェック結果をファイル名にも反映するようにする
                 filename_ch,
                 signal_spec.d
             )?;
