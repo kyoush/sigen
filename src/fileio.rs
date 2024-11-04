@@ -29,7 +29,7 @@ fn is_file_exist(filename: &str) -> bool {
 
 fn file_override_check(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut input = String::new();
-    print!("The file [{}] will be overridden. Are you sure? [y/N] ", filename);
+    print!("Do you want to overwrite [{}]? [y/N] ", filename);
     io::stdout().flush().unwrap();
     if io::stdin().read_line(&mut input).is_err() {
         return Err("Failed to reading input".into());
