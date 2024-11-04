@@ -1,9 +1,11 @@
 use std::path::Path;
 use std::io::{self, Write};
-use std::error::Error;
 
 pub mod wavread;
 pub mod wavwrite;
+
+pub const RIFF_HEADER_SIZE: usize = 44; // bytes
+const FILESIZE_WARN_LEVEL: usize = 1_000_000_000; // 1GB
 
 pub struct FileInfo {
     pub name: String,
@@ -25,21 +27,45 @@ fn is_file_exist(filename: &str) -> bool {
     exists
 }
 
-fn file_override_check(filename: &str) -> Result<(), Box<dyn Error>> {
+fn file_override_check(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut input = String::new();
     print!("The file [{}] will be overridden. Are you sure? [y/N] ", filename);
     io::stdout().flush().unwrap();
     if io::stdin().read_line(&mut input).is_err() {
-        return Err("failed to reading input".into());
+        return Err("Failed to reading input".into());
     }
 
     match input.trim().to_lowercase().as_str() {
         "y" | "yes" => {
             Ok(())
         }
-        _=> {
+        _ => {
             return Err("The operation was canceled by user.".into());
         }
+    }
+}
+
+fn output_filesize_check(filesize: usize) -> Result<(), Box<dyn std::error::Error>> {
+    if filesize > FILESIZE_WARN_LEVEL {
+        let mut input = String::new();
+        print!(
+            "The output file size will approximately {:.1} GB. Proceed? [y/N] ",
+            filesize as f64 / 1024.0 / 1024.0 / 1024.0
+        );
+        io::stdout().flush()?;
+
+        io::stdin().read_line(&mut input)?;
+
+        match input.trim().to_lowercase().as_str() {
+            "y" | "yes" => {
+                return Ok(());
+            }
+            _ => {
+                return Err("The operation was canceled by user".into());
+            }
+        }
+    }else {
+        Ok(())
     }
 }
 
@@ -80,7 +106,7 @@ pub fn gen_file_name(
     start_freq: i32,
     end_freq: i32,
     filename_ch: &str,
-    d: u32) -> Result<FileInfo, Box<dyn Error>> {
+    d: u32) -> Result<FileInfo, Box<dyn std::error::Error>> {
     let filename = if let Some(name) = output_filename {
         name.clone()
     }else {
@@ -110,7 +136,7 @@ pub fn gen_file_name(
     })
 }
 
-pub fn set_output_filename(output_filename: Option<Option<String>>, input_filename: &str) -> Result<FileInfo, Box<dyn Error>> {
+pub fn set_output_filename(output_filename: Option<Option<String>>, input_filename: &str) -> Result<FileInfo, Box<dyn std::error::Error>> {
     let mut override_msg = "";
     match output_filename {
         Some(Some(ref name)) if !name.is_empty() => { // @todo .wavの拡張子がついているかチェックを追加する
