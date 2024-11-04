@@ -58,7 +58,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     if let commands::Commands::Taper(taper_options) = &args.subcommand {
-        processing::apply_taper_to_wav(&taper_options, &taper_spec)?;
+        let fileinfo = processing::apply_taper_to_wav(&taper_options, &taper_spec)?;
+        println!("WAV file [{}] created successfully {}", fileinfo.name, fileinfo.exists_msg);
         return Ok(());
     }
 
@@ -119,7 +120,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     fileio::wavwrite::write_wav_file(wav_spec, &fileinfo.name, &samples_to_write, enable_l, enable_r)?;
 
-    println!("WAV file \"{}\" created successfully{}", fileinfo.name, fileinfo.exists_msg);
+    println!("WAV file [{}] created successfully {}", fileinfo.name, fileinfo.exists_msg);
 
     Ok(())
 }

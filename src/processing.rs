@@ -4,19 +4,19 @@ use std::error::Error;
 use rtaper::TaperSpec;
 use crate::commands::taper::TaperOptions;
 use crate::SignalSpec;
-use crate::fileio::{wavwrite, wavread};
+use crate::fileio::{wavread, wavwrite, FileInfo};
 
-pub fn apply_taper_to_wav(options: &TaperOptions, taper_spec: &TaperSpec) -> Result<(), Box<dyn Error>> {
+pub fn apply_taper_to_wav(options: &TaperOptions, taper_spec: &TaperSpec) -> Result<FileInfo, Box<dyn Error>> {
     let (mut samples, spec) = wavread::read_wav_file(options.input.as_str())?;
     let num_ch = samples.len();
     for i in 0..num_ch {
         rtaper::apply_taper_both(&mut samples[i], &taper_spec)?;
     }
 
-    let output_filename = crate::fileio::set_output_filename(options.output.clone(), options.input.as_str())?;
-    wavwrite::write_wav_file(spec, output_filename.as_str(), &samples, true, true)?;
+    let fileinfo = crate::fileio::set_output_filename(options.output.clone(), options.input.as_str())?;
+    wavwrite::write_wav_file(spec, fileinfo.name.as_str(), &samples, true, true)?;
 
-    Ok(())
+    Ok(fileinfo)
 }
 
 pub fn generate_sine_wave(spec: &SignalSpec, frequency: u32) -> Vec<f64> {

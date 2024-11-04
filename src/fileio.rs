@@ -13,7 +13,7 @@ pub struct FileInfo {
 fn is_file_exist(filename: &str) -> bool {
     let exists = Path::new(filename).exists();
     if exists{
-        println!("The file [{}] already exists", filename);
+        println!("The file [{}] already exists.", filename);
     }
     exists
 }
@@ -78,10 +78,9 @@ pub fn gen_file_name(sig_type: &str, start_freq: i32, end_freq: i32, filename_ch
     );
 
     let mut override_msg = String::new();
-    if Path::new(&filename).exists() {
-        println!("ファイルがすでに存在します。というメッセージだしたい");
+    if is_file_exist(&filename) {
         file_override_check(&filename)?;
-        override_msg = " (file override)".to_string();
+        override_msg = "(file override)".to_string();
     }
 
     Ok(FileInfo {
@@ -90,13 +89,18 @@ pub fn gen_file_name(sig_type: &str, start_freq: i32, end_freq: i32, filename_ch
     })
 }
 
-pub fn set_output_filename(output_filename: Option<Option<String>>, input_filename: &str) -> Result<String, Box<dyn Error>> {
+pub fn set_output_filename(output_filename: Option<Option<String>>, input_filename: &str) -> Result<FileInfo, Box<dyn Error>> {
+    let mut override_msg = "";
     match output_filename {
-        Some(Some(ref name)) if !name.is_empty() => {
+        Some(Some(ref name)) if !name.is_empty() => { // @todo .wavの拡張子がついているかチェックを追加する
             if is_file_exist(name) {
                 file_override_check(name)?;
+                override_msg = "(file override)";
             }
-            Ok(name.clone()) // @todo .wavの拡張子がついているかチェックを追加する
+            Ok(FileInfo {
+                    name: name.clone(),
+                    exists_msg: override_msg.to_string(),
+            })
         }
         Some(Some(_)) => {
             return Err("The output filename is empty!".into());
@@ -104,15 +108,23 @@ pub fn set_output_filename(output_filename: Option<Option<String>>, input_filena
         Some(None) => {
             if is_file_exist(input_filename) {
                 file_override_check(input_filename)?;
+                override_msg = " (file override)";
             }
-            Ok(input_filename.to_string())
+            Ok(FileInfo {
+                name: input_filename.to_string(),
+                exists_msg: override_msg.to_string(),
+            })
         }
         None => {
             let default_name = format!("{}_tapered.wav", extract_stem(input_filename));
             if is_file_exist(&default_name) {
                 file_override_check(&default_name)?;
+                override_msg = " (file override)";
             }
-            Ok(default_name)
+            Ok(FileInfo {
+                name: default_name,
+                exists_msg: override_msg.to_string(),
+            })
         }
     }
 }
