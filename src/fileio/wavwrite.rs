@@ -11,7 +11,7 @@ pub fn write_wav_file(
     enable_r: bool,
 ) -> Result<(), Box<dyn Error>> {
     if !is_wav_file(filename) {
-        return Err("The filename must have a .wav extension".into());
+        return Err(format!("The filename must have a .wav extension. [{}]", filename).into());
     }
 
     let mut writer = WavWriter::create(filename, spec)?;

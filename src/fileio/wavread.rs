@@ -5,7 +5,7 @@ use super::is_wav_file;
 
 pub fn read_wav_file(filename: &str) -> Result<(Vec<Vec<f64>>, WavSpec), Box<dyn Error>> {
     if !is_wav_file(filename) {
-        return Err("the filename must have a .wav extension".into());
+        return Err(format!("the filename must have a .wav extension. [{}]", filename).into());
     }
 
     let mut reader =  WavReader::open(filename)?;

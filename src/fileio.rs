@@ -74,15 +74,29 @@ fn extract_stem(input_filename: &str) -> String {
         .unwrap_or("").to_string()
 }
 
-pub fn gen_file_name(sig_type: &str, start_freq: i32, end_freq: i32, filename_ch: &str, d: u32) -> Result<FileInfo, Box<dyn Error>> {
-    let filename_start_freq = freq_format(start_freq, "");
-    let filename_end_freq = freq_format(end_freq, "to_");
-    let filename_duration = seconds_format(d);
+pub fn gen_file_name(
+    output_filename: &Option<String>,
+    sig_type: &str,
+    start_freq: i32,
+    end_freq: i32,
+    filename_ch: &str,
+    d: u32) -> Result<FileInfo, Box<dyn Error>> {
+    let filename = if let Some(name) = output_filename {
+        name.clone()
+    }else {
+        let filename_start_freq = freq_format(start_freq, "");
+        let filename_end_freq = freq_format(end_freq, "to_");
+        let filename_duration = seconds_format(d);
 
-    let filename = format!(
-        "{}{}{}{}{}.wav",
-        sig_type, filename_start_freq, filename_end_freq, filename_duration, filename_ch
-    );
+        format!(
+            "{}{}{}{}{}.wav",
+            sig_type, filename_start_freq, filename_end_freq, filename_duration, filename_ch
+        )
+    };
+
+    if !is_wav_file(filename.as_str()) {
+        return Err(format!("the filename must have a .wav extension. [{}]", filename).into());
+    }
 
     let mut override_msg = String::new();
     if is_file_exist(&filename) {

@@ -64,7 +64,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let (signal_spec, enable_l, enable_r, filename_ch) = match common_options {
-        Some(common_options) =>  {
+        Some(ref common_options) =>  {
             let signal_spec = SignalSpec {
                 amp: common_options.amplitude,
                 ch: common_options.channels.clone(),
@@ -92,15 +92,35 @@ fn main() -> Result<(), Box<dyn Error>> {
     let fileinfo;
     match args.subcommand {
         commands::Commands::Sine(sine_options) => {
-            fileinfo = fileio::gen_file_name("sine", sine_options.frequency as i32, -1, filename_ch, signal_spec.d)?;
+            fileinfo = fileio::gen_file_name(
+                &common_options.unwrap().output_filename,
+                "sine",
+                sine_options.frequency as i32,
+                -1, filename_ch,
+                signal_spec.d
+            )?;
             samples = processing::generate_sine_wave(&signal_spec, sine_options.frequency);
         }
         commands::Commands::White(_) => {
-            fileinfo = fileio::gen_file_name("white", -1, -1, filename_ch, signal_spec.d)?;
+            fileinfo = fileio::gen_file_name(
+                &common_options.unwrap().output_filename,
+                "white",
+                -1,
+                -1,
+                filename_ch,
+                signal_spec.d
+            )?;
             samples = processing::generate_white_noise(&signal_spec);
         }
         commands::Commands::Tsp(tsp_options) => {
-            fileinfo = fileio::gen_file_name("tsp", tsp_options.startf, tsp_options.endf, filename_ch, signal_spec.d)?;
+            fileinfo = fileio::gen_file_name(
+                &common_options.unwrap().output_filename,
+                "tsp",
+                tsp_options.startf,
+                tsp_options.endf,
+                filename_ch,
+                signal_spec.d
+            )?;
             samples = processing::generate_tsp_signal(&signal_spec, tsp_options.tsp_type, tsp_options.startf, tsp_options.endf);
         }
         _ => {
