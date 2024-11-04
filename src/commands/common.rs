@@ -35,7 +35,7 @@ pub struct TaperSpecOptions {
     )]
     pub length_of_taper: usize,
 
-    // type of taper
+    /// type of taper
     #[arg(
         short, long,
         default_value = "linear",

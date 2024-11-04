@@ -1,4 +1,7 @@
+use std::error::Error;
 use hound::{WavSpec, WavWriter};
+
+use super::is_wav_file;
 
 pub fn write_wav_file(
     spec: WavSpec,
@@ -6,7 +9,11 @@ pub fn write_wav_file(
     samples: &[Vec<f64>],
     enable_l: bool,
     enable_r: bool,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn Error>> {
+    if !is_wav_file(filename) {
+        return Err("The filename must have a .wav extension".into());
+    }
+
     let mut writer = WavWriter::create(filename, spec)?;
 
     let total_samples = samples[0].len();

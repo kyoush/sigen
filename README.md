@@ -30,10 +30,6 @@ Options:
   -V, --version  Print version
 ```
 
-support signal type:
-- sine
-- white noise
-
 ### generate wav files
 
 - support waveform
