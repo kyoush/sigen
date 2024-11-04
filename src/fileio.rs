@@ -10,6 +10,13 @@ pub struct FileInfo {
     pub exists_msg: String,
 }
 
+fn is_wav_file(filename: &str) -> bool {
+    Path::new(filename)
+        .extension()
+        .map(|e| e == "wav")
+        .unwrap_or(false)
+}
+
 fn is_file_exist(filename: &str) -> bool {
     let exists = Path::new(filename).exists();
     if exists{
