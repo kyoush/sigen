@@ -140,7 +140,7 @@ pub fn set_output_filename(output_filename: Option<Option<String>>, input_filena
     let mut fileinfo = FileInfo{
         name: String::new(),
         exists_msg: String::new(),
-    }
+    };
     match output_filename {
         Some(Some(ref name)) if !name.is_empty() => {
             if is_file_exist(name) {
@@ -170,7 +170,7 @@ pub fn set_output_filename(output_filename: Option<Option<String>>, input_filena
     }
 
     if is_wav_file(fileinfo.name.as_str()) {
-        Ok((fileinfo))
+        Ok(fileinfo)
     }else {
         return Err(format!("the filename must have a .wav extension. [{}]", fileinfo.name).into());
 
