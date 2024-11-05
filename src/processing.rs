@@ -250,18 +250,18 @@ pub fn signal_generator(args: &gen::GenOptions) -> Result<(), Box<dyn Error>>{
             samples = generate_tsp_signal(&signal_spec, tsp_options.tsp_type.clone(), startf_verified, endf_verified)?;
         }
         gen::WaveFormCommands::Pwm(pwm_options) => {
-            let freq = value_verify(pwm_options.frequency, 0, signal_spec.fs / 2);
-            let duty = value_verify(pwm_options.percent_of_duty, 0, 100);
+            let f_verified = value_verify(pwm_options.frequency, 0, signal_spec.fs / 2);
+            let d_verified = value_verify(pwm_options.percent_of_duty, 0, 100);
             fileinfo = gen_file_name(
                 &common_options.unwrap().output_filename,
                 "pwm",
-                freq,
+                f_verified,
                 -1,
                 filename_ch,
                 signal_spec.d
             )?;
 
-            samples = generate_pwm_signal(&signal_spec, freq, duty)?;
+            samples = generate_pwm_signal(&signal_spec, f_verified, d_verified)?;
         }
     }
 
