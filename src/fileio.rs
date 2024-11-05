@@ -137,17 +137,17 @@ pub fn gen_file_name(
 }
 
 pub fn set_output_filename(output_filename: Option<Option<String>>, input_filename: &str) -> Result<FileInfo, Box<dyn std::error::Error>> {
-    let mut override_msg = "";
+    let mut fileinfo = FileInfo{
+        name: String::new(),
+        exists_msg: String::new(),
+    }
     match output_filename {
-        Some(Some(ref name)) if !name.is_empty() => { // @todo .wavの拡張子がついているかチェックを追加する
+        Some(Some(ref name)) if !name.is_empty() => {
             if is_file_exist(name) {
                 file_override_check(name)?;
-                override_msg = "(file override)";
+                fileinfo.exists_msg = "(file override)".to_string();
             }
-            Ok(FileInfo {
-                    name: name.clone(),
-                    exists_msg: override_msg.to_string(),
-            })
+            fileinfo.name = name.clone();
         }
         Some(Some(_)) => {
             return Err("The output filename is empty!".into());
@@ -155,23 +155,24 @@ pub fn set_output_filename(output_filename: Option<Option<String>>, input_filena
         Some(None) => {
             if is_file_exist(input_filename) {
                 file_override_check(input_filename)?;
-                override_msg = " (file override)";
+                fileinfo.exists_msg = " (file override)".to_string();
             }
-            Ok(FileInfo {
-                name: input_filename.to_string(),
-                exists_msg: override_msg.to_string(),
-            })
+            fileinfo.name = input_filename.to_string();
         }
         None => {
             let default_name = format!("{}_tapered.wav", extract_stem(input_filename));
             if is_file_exist(&default_name) {
                 file_override_check(&default_name)?;
-                override_msg = " (file override)";
+                fileinfo.exists_msg = " (file override)".to_string();
             }
-            Ok(FileInfo {
-                name: default_name,
-                exists_msg: override_msg.to_string(),
-            })
+            fileinfo.name = default_name;
         }
+    }
+
+    if is_wav_file(fileinfo.name.as_str()) {
+        Ok((fileinfo))
+    }else {
+        return Err(format!("the filename must have a .wav extension. [{}]", fileinfo.name).into());
+
     }
 }
