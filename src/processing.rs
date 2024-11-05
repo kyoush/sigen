@@ -39,11 +39,9 @@ pub fn apply_taper_to_wav(options: &TaperOptions, taper_spec: &TaperSpec) -> Res
 pub fn generate_sine_wave(spec: &SignalSpec, frequency: u32) -> Vec<f64> {
     let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
-    let f_verified  = value_verify(frequency, 0, spec.fs / 2) as f32;
-
     for i in 0..sample_count {
         let t = i as f32 / spec.fs as f32;
-        let sample = spec.amp * (2.0 * PI * f_verified * t).sin() as f64;
+        let sample = spec.amp * (2.0 * PI * frequency as f32 * t).sin() as f64;
         samples.push(sample);
     }
 
@@ -73,12 +71,10 @@ pub fn generate_white_noise(spec: &SignalSpec) -> Vec<f64> {
 fn generate_linear_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Vec<f64> {
     let sample_count = (spec.d as u32 * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
-    let h_verified = value_verify(highfreq, 0.0, spec.fs as f64 / 2.0);
-    let l_verified = value_verify(lowfreq, 0.0, h_verified);
 
     for n in 0..sample_count {
         let t = n as f64 / spec.fs as f64;
-        let phase = 2.0 * PI as f64 * (lowfreq * t + ((h_verified - l_verified) / (2.0 * spec.d as f64)) * t * t);
+        let phase = 2.0 * PI as f64 * (lowfreq * t + ((highfreq - lowfreq) / (2.0 * spec.d as f64)) * t * t);
         samples.push(spec.amp * phase.sin());
     }
 

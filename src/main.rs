@@ -94,14 +94,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     let fileinfo;
     match args.subcommand {
         commands::Commands::Sine(sine_options) => {
+            let f_verified  = processing::value_verify(sine_options.frequency, 0, signal_spec.fs / 2);
+
             fileinfo = fileio::gen_file_name(
                 &common_options.unwrap().output_filename,
                 "sine",
-                sine_options.frequency as i32, // @todo 値の範囲チェック結果をファイル名にも反映するようにする
+                f_verified as i32,
                 -1, filename_ch,
                 signal_spec.d
             )?;
-            samples = processing::generate_sine_wave(&signal_spec, sine_options.frequency);
+            samples = processing::generate_sine_wave(&signal_spec, f_verified);
         }
         commands::Commands::White(_) => {
             fileinfo = fileio::gen_file_name(
@@ -115,15 +117,18 @@ fn main() -> Result<(), Box<dyn Error>> {
             samples = processing::generate_white_noise(&signal_spec);
         }
         commands::Commands::Tsp(tsp_options) => {
+            let startf_verified = processing::value_verify(tsp_options.startf, 0, (signal_spec.fs / 2) as i32);
+            let endf_verified = processing::value_verify(tsp_options.endf, 0, startf_verified);
+
             fileinfo = fileio::gen_file_name(
                 &common_options.unwrap().output_filename,
                 "tsp",
-                tsp_options.startf, // @todo 値の範囲チェック結果をファイル名にも反映するようにする
-                tsp_options.endf, // @todo 値の範囲チェック結果をファイル名にも反映するようにする
+                startf_verified,
+                endf_verified,
                 filename_ch,
                 signal_spec.d
             )?;
-            samples = processing::generate_tsp_signal(&signal_spec, tsp_options.tsp_type, tsp_options.startf, tsp_options.endf);
+            samples = processing::generate_tsp_signal(&signal_spec, tsp_options.tsp_type, startf_verified, endf_verified);
         }
         _ => {
             return Err("unexpected command type".into());
