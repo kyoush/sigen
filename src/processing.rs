@@ -1,10 +1,9 @@
 use std::f32::consts::PI;
-use std::process::exit;
 use std::error::Error;
 use hound::WavSpec;
-use rtaper::{WindowType, TaperSpec, apply_taper_both, apply_taper_fade_out};
+use rtaper::{WindowType, TaperSpec};
 
-use crate::commands::{gen::WaveFormCommands, common::TaperSpecOptions, taper::TaperOptions};
+use crate::commands::{gen, common::TaperSpecOptions, taper::TaperOptions};
 use crate::fileio::{wavread, wavwrite, gen_file_name};
 
 const CH: u16 = 2; // stereo
@@ -15,8 +14,8 @@ const AMP_MAX: f64 = 1.0;
 struct SignalSpec {
     pub amp: f64,
     pub ch: String,
-    pub fs: u32,
-    pub d: u32,
+    pub fs: i32,
+    pub d: i32,
     pub taper_spec: TaperSpec,
 }
 
@@ -58,7 +57,7 @@ pub fn apply_taper_to_wav(options: &TaperOptions) -> Result<(), Box<dyn Error>> 
     let num_ch = samples.len();
 
     for i in 0..num_ch {
-        apply_taper_both(&mut samples[i], &taper_spec)?;
+        rtaper::apply_taper_both(&mut samples[i], &taper_spec)?;
     }
 
     let fileinfo = crate::fileio::set_output_filename(options.output.clone(), options.input.as_str())?;
@@ -69,7 +68,7 @@ pub fn apply_taper_to_wav(options: &TaperOptions) -> Result<(), Box<dyn Error>> 
     Ok(())
 }
 
-fn generate_sine_wave(spec: &SignalSpec, frequency: u32) -> Vec<f64> {
+fn generate_sine_wave(spec: &SignalSpec, frequency: i32) -> Result<Vec<f64>, Box<dyn Error>> {
     let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
     for i in 0..sample_count {
@@ -78,14 +77,12 @@ fn generate_sine_wave(spec: &SignalSpec, frequency: u32) -> Vec<f64> {
         samples.push(sample);
     }
 
-    if let Err(e) = apply_taper_both(&mut samples, &spec.taper_spec) {
-        eprintln!("failed to apply taper: {}", e);
-    }
+    rtaper::apply_taper_both(&mut samples, &spec.taper_spec)?;
 
-    samples
+    Ok(samples)
 }
 
-fn generate_white_noise(spec: &SignalSpec) -> Vec<f64> {
+fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
     let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
@@ -94,15 +91,13 @@ fn generate_white_noise(spec: &SignalSpec) -> Vec<f64> {
         samples.push(noise);
     }
 
-    if let Err(e) = apply_taper_both(&mut samples, &spec.taper_spec) {
-        eprintln!("failed to apply taper: {}", e);
-    }
+    rtaper::apply_taper_both(&mut samples, &spec.taper_spec)?;
 
-    samples
+    Ok(samples)
 }
 
-fn generate_linear_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Vec<f64> {
-    let sample_count = (spec.d as u32 * spec.fs) as usize;
+fn generate_linear_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Result<Vec<f64>, Box<dyn Error>> {
+    let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
     for n in 0..sample_count {
@@ -111,11 +106,11 @@ fn generate_linear_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Vec<f6
         samples.push(spec.amp * phase.sin());
     }
 
-    samples
+    Ok(samples)
 }
 
-fn generate_log_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Vec<f64> {
-    let sample_count = (spec.d as u32 * spec.fs) as usize;
+fn generate_log_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Result<Vec<f64>, Box<dyn Error>> {
+    let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
     for n in 0..sample_count {
@@ -126,45 +121,64 @@ fn generate_log_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Vec<f64> 
     }
 
     let cutoff_index = (sample_count as f32 * 0.75) as usize;
-
     let signal = &samples[0..cutoff_index];
-    signal.to_vec()
+
+    Ok(signal.to_vec())
 }
 
-fn generate_tsp_signal(spec: &SignalSpec, tsp_type: String, lowfreq: i32, highfreq: i32) -> Vec<f64> {
+fn generate_tsp_signal(spec: &SignalSpec, tsp_type: String, lowfreq: i32, highfreq: i32) -> Result<Vec<f64>, Box<dyn Error>> {
     let mut samples;
 
     if tsp_type == "linear" {
-        samples = generate_linear_tsp(&spec, lowfreq as f64, highfreq as f64);
+        samples = generate_linear_tsp(&spec, lowfreq as f64, highfreq as f64)?;
     } else if tsp_type == "log" {
-        samples = generate_log_tsp(&spec, lowfreq as f64, highfreq as f64);
+        samples = generate_log_tsp(&spec, lowfreq as f64, highfreq as f64)?;
     } else {
-        eprintln!("Error: unexpected type of tsp signal");
-        exit(1);
-    }
-    if let Err(e) = apply_taper_fade_out(&mut samples, &spec.taper_spec) {
-        eprintln!("failed to apply taper: {}", e);
+        return Err("unexpected type of tsp signal".into());
     }
 
-    samples
+    rtaper::apply_taper_fade_out(&mut samples, &spec.taper_spec)?;
+
+    Ok(samples)
 }
 
-pub fn signal_generator(args: &super::commands::gen::GenOptions) -> Result<(), Box<dyn Error>>{
-    let (common_options, taper_options, duration) = match &args.waveform {
-        super::commands::gen::WaveFormCommands::Sine(sine_options) => (
+fn generate_pwm_signal(spec: &SignalSpec, freq: i32, duty: u32) -> Result<Vec<f64>, Box<dyn Error>> {
+    let mut samples = vec![0.0; (spec.fs * spec.d) as usize];
+    let period_samples = spec.fs / freq;
+    let high_samples = (period_samples  as f64 * (duty as f64 / 100.0)) as usize;
+
+    for period_start_point in (0..spec.fs * spec.d).step_by(period_samples as usize) {
+        let end = period_start_point + high_samples as i32;
+        if end > spec.fs * spec.d {
+            break;
+        }
+        for high_point in period_start_point..end {
+            samples[high_point as usize] = spec.amp;
+        }
+    }
+
+    rtaper::apply_taper_both(&mut samples, &spec.taper_spec)?;
+
+    Ok(samples)
+}
+
+pub fn signal_generator(args: &gen::GenOptions) -> Result<(), Box<dyn Error>>{
+    let (common_options, taper_options) = match &args.waveform {
+        gen::WaveFormCommands::Sine(sine_options) => (
             Some(sine_options.options.clone()),
             &sine_options.taper_opt,
-            sine_options.duration,
         ),
-        super::commands::gen::WaveFormCommands::White(white_options) => (
+        gen::WaveFormCommands::White(white_options) => (
             Some(white_options.options.clone()),
             &white_options.taper_opt,
-            white_options.duration,
         ),
-        super::commands::gen::WaveFormCommands::Tsp(tsp_options) => (
+        gen::WaveFormCommands::Tsp(tsp_options) => (
             Some(tsp_options.options.clone()),
             &tsp_options.taper_opt,
-            tsp_options.duration,
+        ),
+        gen::WaveFormCommands::Pwm(pwm_options) => (
+            Some(pwm_options.options.clone()),
+            &pwm_options.taper_opt,
         ),
     };
 
@@ -176,7 +190,7 @@ pub fn signal_generator(args: &super::commands::gen::GenOptions) -> Result<(), B
                 amp: value_verify(common_options.amplitude, AMP_MIN, AMP_MAX),
                 ch: common_options.channels.clone(),
                 fs: common_options.rate_of_sample,
-                d: duration,
+                d: common_options.duration,
                 taper_spec: taper_spec,
             };
 
@@ -198,19 +212,19 @@ pub fn signal_generator(args: &super::commands::gen::GenOptions) -> Result<(), B
     let samples;
     let fileinfo;
     match &args.waveform {
-        WaveFormCommands::Sine(sine_options) => {
+        gen::WaveFormCommands::Sine(sine_options) => {
             let f_verified  = value_verify(sine_options.frequency, 0, signal_spec.fs / 2);
 
             fileinfo = gen_file_name(
                 &common_options.unwrap().output_filename,
                 "sine",
-                f_verified as i32,
+                f_verified,
                 -1, filename_ch,
                 signal_spec.d
             )?;
-            samples = generate_sine_wave(&signal_spec, f_verified);
+            samples = generate_sine_wave(&signal_spec, f_verified)?;
         }
-        WaveFormCommands::White(_) => {
+        gen::WaveFormCommands::White(_) => {
             fileinfo = gen_file_name(
                 &common_options.unwrap().output_filename,
                 "white",
@@ -219,10 +233,10 @@ pub fn signal_generator(args: &super::commands::gen::GenOptions) -> Result<(), B
                 filename_ch,
                 signal_spec.d
             )?;
-            samples = generate_white_noise(&signal_spec);
+            samples = generate_white_noise(&signal_spec)?;
         }
-        WaveFormCommands::Tsp(tsp_options) => {
-            let startf_verified = value_verify(tsp_options.startf, 0, (signal_spec.fs / 2) as i32);
+        gen::WaveFormCommands::Tsp(tsp_options) => {
+            let startf_verified = value_verify(tsp_options.startf, 0, signal_spec.fs / 2);
             let endf_verified = value_verify(tsp_options.endf, 0, startf_verified);
 
             fileinfo = gen_file_name(
@@ -233,14 +247,28 @@ pub fn signal_generator(args: &super::commands::gen::GenOptions) -> Result<(), B
                 filename_ch,
                 signal_spec.d
             )?;
-            samples = generate_tsp_signal(&signal_spec, tsp_options.tsp_type.clone(), startf_verified, endf_verified);
+            samples = generate_tsp_signal(&signal_spec, tsp_options.tsp_type.clone(), startf_verified, endf_verified)?;
+        }
+        gen::WaveFormCommands::Pwm(pwm_options) => {
+            let freq = value_verify(pwm_options.frequency, 0, signal_spec.fs / 2);
+            let duty = value_verify(pwm_options.percent_of_duty, 0, 100);
+            fileinfo = gen_file_name(
+                &common_options.unwrap().output_filename,
+                "pwm",
+                freq,
+                -1,
+                filename_ch,
+                signal_spec.d
+            )?;
+
+            samples = generate_pwm_signal(&signal_spec, freq, duty)?;
         }
     }
 
     // write wav file
     let wav_spec = WavSpec {
         channels: CH,
-        sample_rate: signal_spec.fs,
+        sample_rate: signal_spec.fs as u32,
         bits_per_sample: BITS_PER_SAMPLE,
         sample_format: hound::SampleFormat::Int,
     };

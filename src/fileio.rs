@@ -81,7 +81,7 @@ fn freq_format(freq: i32, prefix: &str) -> String {
     }
 }
 
-fn seconds_format(sec: u32) -> String{
+fn seconds_format(sec: i32) -> String{
     if sec >= 60 {
         if sec % 60 == 0 {
             format!("_{}min", sec / 60)
@@ -106,7 +106,7 @@ pub fn gen_file_name(
     start_freq: i32,
     end_freq: i32,
     filename_ch: &str,
-    d: u32) -> Result<FileInfo, Box<dyn std::error::Error>> {
+    d: i32) -> Result<FileInfo, Box<dyn std::error::Error>> {
     let filename = if let Some(name) = output_filename {
         name.clone()
     }else {
