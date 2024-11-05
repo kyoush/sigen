@@ -1,9 +1,7 @@
 use clap::{Parser, Subcommand};
 
+pub mod gen;
 pub mod common;
-pub mod sine;
-pub mod white;
-pub mod tsp;
 pub mod taper;
 
 pub const AMP_DEF: f64 = 0.45;
@@ -25,17 +23,11 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// generate a wav file with a sine wave
-    Sine(sine::SineOptions),
-
-    /// generate a wave file with a white noise
-    White(white::WhiteOptions),
-
-    /// generate a wave file with a TSP [Time Stretched Pulse] waveform
-    Tsp (tsp::TspOptions),
+    /// generate a wav file
+    Gen(gen::GenOptions),
 
     /// apply taper processing on existing wav file
     Taper(taper::TaperOptions),
 
-    // Wav(wav::WavOptions), // To be Extended
+    // @todo cat to be extended.
 }

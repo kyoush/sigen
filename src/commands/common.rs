@@ -31,7 +31,7 @@ pub struct CommonOptions {
     pub output_filename: Option<String>,
 }
 
-#[derive(Args, Debug)]
+#[derive(Args, Clone, Debug)]
 pub struct TaperSpecOptions {
     /// length of taper
     /// set this to zero to disable tapering
