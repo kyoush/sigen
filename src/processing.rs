@@ -8,10 +8,8 @@ use crate::fileio::{wavread, wavwrite, gen_file_name};
 
 const CH: u16 = 2; // stereo
 const BITS_PER_SAMPLE: u16 = 16;
-const AMP_MIN: f64 = 0.0;
-const AMP_MAX: f64 = 1.0;
 
-struct SignalSpec {
+pub struct SignalSpec {
     pub amp: f64,
     pub ch: String,
     pub fs: i32,
@@ -19,7 +17,7 @@ struct SignalSpec {
     pub taper_spec: TaperSpec,
 }
 
-fn value_verify<T>(value: T, min: T, max: T) -> T
+pub fn value_verify<T>(value: T, min: T, max: T) -> T
 where
     T: PartialOrd + Copy,
 {
@@ -165,23 +163,14 @@ fn generate_pwm_signal(spec: &SignalSpec, freq: i32, duty: u32) -> Result<Vec<f6
 pub fn signal_generator(args: &gen::GenOptions) -> Result<(), Box<dyn Error>>{
     let common_options = args.waveform.get_common_opt();
     let taper_spec = args.waveform.get_taper_spec();
+    let signal_spec = common_options.get_signal_spec(taper_spec);
 
-    let (signal_spec, enable_l, enable_r, filename_ch) = {
-        let signal_spec = SignalSpec {
-            amp: value_verify(common_options.amplitude, AMP_MIN, AMP_MAX),
-            ch: common_options.channels.clone(),
-            fs: common_options.rate_of_sample,
-            d: common_options.duration,
-            taper_spec: taper_spec,
-        };
-
-        match signal_spec.ch.as_str() {
-            "L" => (signal_spec, true, false, "l_only"),
-            "R" => (signal_spec, false, true, "_r_only"),
-            "LR" => (signal_spec, true, true, ""),
-            _ => {
-                return Err("unknown spec ch error".into());
-            }
+    let (enable_l, enable_r, filename_ch) = match signal_spec.ch.as_str() {
+        "L" => (true, false, "l_only"),
+        "R" => (false, true, "_r_only"),
+        "LR" => (true, true, ""),
+        _ => {
+            return Err("unknown spec ch error".into());
         }
     };
 

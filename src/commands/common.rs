@@ -1,4 +1,5 @@
 use clap::Args;
+use rtaper::TaperSpec; 
 
 #[derive(Args, Clone, Debug)]
 pub struct CommonOptions {
@@ -36,6 +37,18 @@ pub struct CommonOptions {
         default_value_t = super::D_DEF,
     )]
     pub duration: i32,
+}
+
+impl CommonOptions {
+    pub fn get_signal_spec(&self, taper_spec: TaperSpec) -> super::processing::SignalSpec {
+        super::processing::SignalSpec {
+            amp: super::processing::value_verify(self.amplitude, super::AMP_MIN, super::AMP_MAX),
+            ch: self.channels.clone(),
+            fs: self.rate_of_sample,
+            d: self.duration,
+            taper_spec: taper_spec,
+        }
+    }
 }
 
 #[derive(Args, Clone, Debug)]
