@@ -1,5 +1,10 @@
 .vscode
-target
 Cargo.lock
 *.wav
+.rustc_info.json
+
+target
 !target/release/sigen
+
+release
+!release/sigen
