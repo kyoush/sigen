@@ -81,7 +81,7 @@ fn freq_format(freq: i32, prefix: &str) -> String {
     }
 }
 
-fn seconds_format(sec: u32) -> String{
+fn seconds_format(sec: i32) -> String{
     if sec >= 60 {
         if sec % 60 == 0 {
             format!("_{}min", sec / 60)
@@ -106,7 +106,7 @@ pub fn gen_file_name(
     start_freq: i32,
     end_freq: i32,
     filename_ch: &str,
-    d: u32) -> Result<FileInfo, Box<dyn std::error::Error>> {
+    d: i32) -> Result<FileInfo, Box<dyn std::error::Error>> {
     let filename = if let Some(name) = output_filename {
         name.clone()
     }else {
@@ -141,35 +141,32 @@ pub fn set_output_filename(output_filename: Option<Option<String>>, input_filena
         name: String::new(),
         exists_msg: String::new(),
     };
-    match output_filename {
-        Some(Some(ref name)) if !name.is_empty() => {
-            if is_file_exist(name) {
-                file_override_check(name)?;
-                fileinfo.exists_msg = "(file override)".to_string();
-            }
-            fileinfo.name = name.clone();
-        }
-        Some(Some(_)) => {
-            return Err("The output filename is empty!".into());
-        }
+
+    let mut enable_file_exists_check = true;
+
+    let filename = match output_filename {
+        Some(Some(ref name)) if !name.is_empty() => name.clone(), // use user specify name
+        Some(Some(_)) => return Err("The output filename is empty!".into()),
         Some(None) => {
-            if is_file_exist(input_filename) {
-                file_override_check(input_filename)?;
-                fileinfo.exists_msg = " (file override)".to_string();
-            }
-            fileinfo.name = input_filename.to_string();
+            enable_file_exists_check = false;
+            input_filename.to_string() // input file will override
         }
-        None => {
-            let default_name = format!("{}_tapered.wav", extract_stem(input_filename));
-            if is_file_exist(&default_name) {
-                file_override_check(&default_name)?;
-                fileinfo.exists_msg = " (file override)".to_string();
-            }
-            fileinfo.name = default_name;
+        None => format!("{}_tapered.wav", extract_stem(input_filename)), // use default name
+    };
+
+    if enable_file_exists_check {
+        if is_file_exist(&filename) {
+            file_override_check(&filename)?;
+            fileinfo.exists_msg = "(file override)".to_string();
         }
+    }else {
+        file_override_check(&filename)?;
+        fileinfo.exists_msg = "(file override)".to_string();
     }
 
-    if is_wav_file(fileinfo.name.as_str()) {
+    fileinfo.name = filename;
+
+    if is_wav_file(&fileinfo.name) {
         Ok(fileinfo)
     }else {
         return Err(format!("the filename must have a .wav extension. [{}]", fileinfo.name).into());

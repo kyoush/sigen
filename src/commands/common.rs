@@ -22,13 +22,20 @@ pub struct CommonOptions {
         short, long,
         default_value_t = super::FS_DEF,
     )]
-    pub rate_of_sample: u32,
+    pub rate_of_sample: i32,
 
     /// Output Filename
     #[arg(
         short, long,
     )]
     pub output_filename: Option<String>,
+
+    /// duration of the signal in seconds.
+    #[arg(
+        short, long,
+        default_value_t = super::D_DEF,
+    )]
+    pub duration: i32,
 }
 
 #[derive(Args, Clone, Debug)]

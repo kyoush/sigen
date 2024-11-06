@@ -10,55 +10,49 @@ You can control parameters such as length, frequency, and channels through comma
 
 name: signal generator => sig. gen. => sigen
 
-## usage
+## Usage: sigen \<COMMAND\>
+
+### generate wav file
 
 ```
-$ ./sigen -h
-A tool for generating WAV files of various signal types
+$ sigen gen -h
+generate a wav file
 
-Usage: sigen <COMMAND>
+Usage: sigen gen <COMMAND>
 
 Commands:
   sine   generate a wav file with a sine wave
-  white  generate a wave file with a white noise
-  tsp    generate a wave file with a TSP [Time Stretched Pulse] waveform
-  taper  apply taper processing on existing wav file
+  white  generate a wav file with a white noise
+  tsp    generate a wav file with a TSP [Time Stretched Pulse] waveform
+  pwm    generate a wav file with a PWM (pulse train)
   help   Print this message or the help of the given subcommand(s)
 
 Options:
-  -h, --help     Print help
-  -V, --version  Print version
+  -h, --help  Print help
 ```
-
-### generate wav files
 
 - support waveform
   - sine wave
   - white noise
   - tsp: time-stretched pulse
-  - PWM/pulse train (future)
+  - PWM (pulse train)
 
-```bash
-❯ ./sigen sine -h
-generate a wav file with a sine wave
+```
+sigen taper -h
+apply taper processing on existing wav file
 
-Usage: sigen sine [OPTIONS]
+Usage: sigen taper [OPTIONS] <INPUT>
+
+Arguments:
+  <INPUT>  input filename
 
 Options:
-  -f, --frequency <FREQUENCY>
-          Frequency of the sine wave in Hz [default: 440]
-  -d, --duration <DURATION>
-          duration of the signal in seconds [default: 30]
-  -a, --amplitude <AMPLITUDE>
-          the maximum absolute value of the signal samplitude [default: 0.45]
-  -c, --channels <CHANNELS>
-          Which channel generate [default: LR] [possible values: L, R, LR]
-  -r, --rate-of-sample <RATE_OF_SAMPLE>
-          [default: 44100]
+  -o, --output [<OUTPUT>]
+          Output filename. If specified without an argument, input file will be overridden
   -l, --length-of-taper <LENGTH_OF_TAPER>
           length of taper set this to zero to disable tapering [default: 4096]
   -w, --window-type <WINDOW_TYPE>
-          [default: linear] [possible values: linear, hann, cos, blackman]
+          type of taper [default: linear] [possible values: linear, hann, cos, blackman]
   -h, --help
           Print help
 ```
@@ -67,7 +61,7 @@ Options:
 
 - applying tapering to the existing wav file
 
-```bash
+```
 ./sigen taper -h
 apply taper processing on existing wav file
 
@@ -91,35 +85,47 @@ Options:
 
 ```bash
 # generate sine wave using default value
-$ sigen sine
-WAV file "sine_440hz_30s.wav" created successfully
+$ sigen gen sine
+WAV file [sine_440hz_5s.wav] created successfully
 ```
 
 ```bash
 # generate R-ch only 5kHz sine wave signal
-$ sigen sine -f 5000 -c R 
-WAV file "sine_5khz_30s_r_only.wav" created successfully
+$ sigen gen sine -f 5000 -c R
+WAV file [sine_5khz_5s_r_only.wav] created successfully
 ```
 
 ```bash
 # generate 10 min. white noise signal
-$ sigen white -d 600
-WAV file "white_10min.wav" created successfully
+$ sigen gen white -d 600
+WAV file [white_10min.wav] created successfully
 ```
-
-
 
 ```bash
 # generate 1 sec Log-TSP signal 500Hz to 5kHz without taper
-$ sigen tsp -t log -s 500 -e 5000 -a 1 -l 0 -d 1 
-WAV file "tsp_500hz_to_5khz_1s.wav" created successfully
+$ sigen gen tsp -t log -s 500 -e 5000 -a 1 -l 0 -d 1
+WAV file [tsp_500hz_to_500hz_1s.wav] created successfully
 ```
 
 ### tapering
 
 ```bash
 # tapering to sine_440hz_30.wav
-$ sigen taper sine_440hz_30s.wav
+$ /sigen taper sine_440hz_5s.wav
+WAV file [sine_440hz_5s_tapered.wav] created successfully
+```
+
+```bash
+# you can override input file
+$ sigen taper sine_440hz_5s.wav -o
+Do you want to overwrite [sine_440hz_5s.wav]? [y/N] y
+WAV file [sine_440hz_5s.wav] created successfully (file override)
+```
+
+```bash
+# you can specify output filename
+$ sigen taper sine_440hz_5s.wav -o output.wav
+WAV file [output.wav] created successfully
 ```
 
 ## License
