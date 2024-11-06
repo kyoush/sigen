@@ -1,5 +1,7 @@
 use clap::{Args, Subcommand};
 use super::common;
+use rtaper::TaperSpec;
+use super::processing;
 
 #[derive(Args, Debug, Clone)]
 pub struct GenOptions {
@@ -20,6 +22,28 @@ pub enum WaveFormCommands {
 
     /// generate a wav file with a PWM (pulse train)
     Pwm(PwmOptions),
+}
+
+impl WaveFormCommands {
+    pub fn get_common_opt(&self) -> &common::CommonOptions {
+        match self {
+            WaveFormCommands::Sine(opt) => &opt.options,
+            WaveFormCommands::White(opt) => &opt.options,
+            WaveFormCommands::Tsp(opt) => &opt.options,
+            WaveFormCommands::Pwm(opt) => &opt.options,
+        }
+    }
+
+    pub fn get_taper_spec(&self) -> TaperSpec {
+        let opt = match self {
+            WaveFormCommands::Sine(opt) => &opt.taper_opt,
+            WaveFormCommands::White(opt) => &opt.taper_opt,
+            WaveFormCommands::Tsp(opt) => &opt.taper_opt,
+            WaveFormCommands::Pwm(opt) => &opt.taper_opt,
+        };
+
+        processing::get_taper_spec(opt)
+    }
 }
 
 #[derive(Args, Debug, Clone)]
