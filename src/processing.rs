@@ -8,10 +8,8 @@ use crate::fileio::{wavread, wavwrite, gen_file_name};
 
 const CH: u16 = 2; // stereo
 const BITS_PER_SAMPLE: u16 = 16;
-const AMP_MIN: f64 = 0.0;
-const AMP_MAX: f64 = 1.0;
 
-struct SignalSpec {
+pub struct SignalSpec {
     pub amp: f64,
     pub ch: String,
     pub fs: i32,
@@ -19,7 +17,7 @@ struct SignalSpec {
     pub taper_spec: TaperSpec,
 }
 
-fn value_verify<T>(value: T, min: T, max: T) -> T
+pub fn value_verify<T>(value: T, min: T, max: T) -> T
 where
     T: PartialOrd + Copy,
 {
@@ -36,7 +34,7 @@ where
     }
 }
 
-fn get_taper_spec(opt: &TaperSpecOptions) -> TaperSpec {
+pub fn get_taper_spec(opt: &TaperSpecOptions) -> TaperSpec {
     let taper_type = match opt.window_type.as_str() {
         "linear" => { WindowType::Linear }
         "hann" => { WindowType::Hann }
@@ -163,48 +161,16 @@ fn generate_pwm_signal(spec: &SignalSpec, freq: i32, duty: u32) -> Result<Vec<f6
 }
 
 pub fn signal_generator(args: &gen::GenOptions) -> Result<(), Box<dyn Error>>{
-    let (common_options, taper_options) = match &args.waveform {
-        gen::WaveFormCommands::Sine(sine_options) => (
-            Some(sine_options.options.clone()),
-            &sine_options.taper_opt,
-        ),
-        gen::WaveFormCommands::White(white_options) => (
-            Some(white_options.options.clone()),
-            &white_options.taper_opt,
-        ),
-        gen::WaveFormCommands::Tsp(tsp_options) => (
-            Some(tsp_options.options.clone()),
-            &tsp_options.taper_opt,
-        ),
-        gen::WaveFormCommands::Pwm(pwm_options) => (
-            Some(pwm_options.options.clone()),
-            &pwm_options.taper_opt,
-        ),
-    };
+    let common_options = args.waveform.get_common_opt();
+    let taper_spec = args.waveform.get_taper_spec();
+    let signal_spec = common_options.get_signal_spec(taper_spec);
 
-    let taper_spec = get_taper_spec(taper_options);
-
-    let (signal_spec, enable_l, enable_r, filename_ch) = match common_options {
-        Some(ref common_options) =>  {
-            let signal_spec = SignalSpec {
-                amp: value_verify(common_options.amplitude, AMP_MIN, AMP_MAX),
-                ch: common_options.channels.clone(),
-                fs: common_options.rate_of_sample,
-                d: common_options.duration,
-                taper_spec: taper_spec,
-            };
-
-            match signal_spec.ch.as_str() {
-                "L" => (signal_spec, true, false, "l_only"),
-                "R" => (signal_spec, false, true, "_r_only"),
-                "LR" => (signal_spec, true, true, ""),
-                _ => {
-                    return Err("unknown spec ch error".into());
-                }
-            }
-        },
-        None => {
-           return Err("common_options is not set".into());
+    let (enable_l, enable_r, filename_ch) = match signal_spec.ch.as_str() {
+        "L" => (true, false, "l_only"),
+        "R" => (false, true, "_r_only"),
+        "LR" => (true, true, ""),
+        _ => {
+            return Err("unknown spec ch error".into());
         }
     };
 
@@ -216,7 +182,7 @@ pub fn signal_generator(args: &gen::GenOptions) -> Result<(), Box<dyn Error>>{
             let f_verified  = value_verify(sine_options.frequency, 0, signal_spec.fs / 2);
 
             fileinfo = gen_file_name(
-                &common_options.unwrap().output_filename,
+                &common_options.output_filename,
                 "sine",
                 f_verified,
                 -1, filename_ch,
@@ -226,7 +192,7 @@ pub fn signal_generator(args: &gen::GenOptions) -> Result<(), Box<dyn Error>>{
         }
         gen::WaveFormCommands::White(_) => {
             fileinfo = gen_file_name(
-                &common_options.unwrap().output_filename,
+                &common_options.output_filename,
                 "white",
                 -1,
                 -1,
@@ -240,7 +206,7 @@ pub fn signal_generator(args: &gen::GenOptions) -> Result<(), Box<dyn Error>>{
             let endf_verified = value_verify(tsp_options.endf, 0, startf_verified);
 
             fileinfo = gen_file_name(
-                &common_options.unwrap().output_filename,
+                &common_options.output_filename,
                 "tsp",
                 startf_verified,
                 endf_verified,
@@ -253,7 +219,7 @@ pub fn signal_generator(args: &gen::GenOptions) -> Result<(), Box<dyn Error>>{
             let f_verified = value_verify(pwm_options.frequency, 0, signal_spec.fs / 2);
             let d_verified = value_verify(pwm_options.percent_of_duty, 0, 100);
             fileinfo = gen_file_name(
-                &common_options.unwrap().output_filename,
+                &common_options.output_filename,
                 "pwm",
                 f_verified,
                 -1,

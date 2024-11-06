@@ -1,10 +1,13 @@
 use clap::{Parser, Subcommand};
+use super::processing;
 
 pub mod gen;
 pub mod common;
 pub mod taper;
 
 // default parameters
+pub const AMP_MIN: f64 = 0.0;
+pub const AMP_MAX: f64 = 1.0;
 pub const AMP_DEF: f64 = 0.45;
 pub const D_DEF: i32 = 5; // sec
 pub const FREQ_DEF: i32 = 440; // Hz
