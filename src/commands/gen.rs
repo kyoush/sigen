@@ -64,8 +64,8 @@ impl WaveFormCommands {
                 )
             },
             WaveFormCommands::Tsp(opt) => {
-                let startf_verified = super::processing::value_verify(opt.startf, 0, fs / 2);
-                let endf_verified = super::processing::value_verify(opt.endf, 0, startf_verified);
+                let endf_verified = super::processing::value_verify(opt.endf, 0, fs / 2);
+                let startf_verified: i32 = super::processing::value_verify(opt.startf, 0, endf_verified);
                 (
                     "tsp",
                     startf_verified,
