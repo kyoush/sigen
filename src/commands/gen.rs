@@ -44,6 +44,44 @@ impl WaveFormCommands {
 
         processing::get_taper_spec(opt)
     }
+
+    pub fn get_fileinfo(&self, fs: i32) -> (&str, i32, i32) {
+        let freq_disable = -1;
+        match self {
+            WaveFormCommands::Sine(opt) => {
+                let f_verified = super::processing::value_verify(opt.frequency, 0, fs / 2);
+                (
+                    "sine",
+                    f_verified,
+                    freq_disable,
+                )
+            },
+            WaveFormCommands::White(_) => {
+                (
+                    "white",
+                    freq_disable,
+                    freq_disable,
+                )
+            },
+            WaveFormCommands::Tsp(opt) => {
+                let startf_verified = super::processing::value_verify(opt.startf, 0, fs / 2);
+                let endf_verified = super::processing::value_verify(opt.endf, 0, startf_verified);
+                (
+                    "tsp",
+                    startf_verified,
+                    endf_verified,
+                )
+            },
+            WaveFormCommands::Pwm(opt) => {
+                let f_verified = super::processing::value_verify(opt.frequency, 0, fs / 2);
+                (
+                    "pwm",
+                    f_verified,
+                    freq_disable,
+                )
+            },
+        }
+    }
 }
 
 #[derive(Args, Debug, Clone)]

@@ -174,60 +174,32 @@ pub fn signal_generator(args: &gen::GenOptions) -> Result<(), Box<dyn Error>>{
         }
     };
 
+    let (sig_type, startf, endf) = args.waveform.get_fileinfo(signal_spec.fs);
+
+    let fileinfo = gen_file_name(
+        &common_options.output_filename,
+        sig_type,
+        startf,
+        endf,
+        filename_ch,
+        signal_spec.d,
+    )?;
+
     // generate signals
     let samples;
-    let fileinfo;
     match &args.waveform {
-        gen::WaveFormCommands::Sine(sine_options) => {
-            let f_verified  = value_verify(sine_options.frequency, 0, signal_spec.fs / 2);
-
-            fileinfo = gen_file_name(
-                &common_options.output_filename,
-                "sine",
-                f_verified,
-                -1, filename_ch,
-                signal_spec.d
-            )?;
-            samples = generate_sine_wave(&signal_spec, f_verified)?;
+        gen::WaveFormCommands::Sine(_) => {
+            samples = generate_sine_wave(&signal_spec, startf)?;
         }
         gen::WaveFormCommands::White(_) => {
-            fileinfo = gen_file_name(
-                &common_options.output_filename,
-                "white",
-                -1,
-                -1,
-                filename_ch,
-                signal_spec.d
-            )?;
             samples = generate_white_noise(&signal_spec)?;
         }
         gen::WaveFormCommands::Tsp(tsp_options) => {
-            let startf_verified = value_verify(tsp_options.startf, 0, signal_spec.fs / 2);
-            let endf_verified = value_verify(tsp_options.endf, 0, startf_verified);
-
-            fileinfo = gen_file_name(
-                &common_options.output_filename,
-                "tsp",
-                startf_verified,
-                endf_verified,
-                filename_ch,
-                signal_spec.d
-            )?;
-            samples = generate_tsp_signal(&signal_spec, tsp_options.tsp_type.clone(), startf_verified, endf_verified)?;
+            samples = generate_tsp_signal(&signal_spec, tsp_options.tsp_type.clone(), startf, endf)?;
         }
         gen::WaveFormCommands::Pwm(pwm_options) => {
-            let f_verified = value_verify(pwm_options.frequency, 0, signal_spec.fs / 2);
             let d_verified = value_verify(pwm_options.percent_of_duty, 0, 100);
-            fileinfo = gen_file_name(
-                &common_options.output_filename,
-                "pwm",
-                f_verified,
-                -1,
-                filename_ch,
-                signal_spec.d
-            )?;
-
-            samples = generate_pwm_signal(&signal_spec, f_verified, d_verified)?;
+            samples = generate_pwm_signal(&signal_spec, startf, d_verified)?;
         }
     }
 
