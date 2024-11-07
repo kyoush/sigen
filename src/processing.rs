@@ -166,7 +166,7 @@ pub fn signal_generator(args: &gen::GenOptions) -> Result<(), Box<dyn Error>>{
     let signal_spec = common_options.get_signal_spec(taper_spec);
 
     let (enable_l, enable_r, filename_ch) = match signal_spec.ch.as_str() {
-        "L" => (true, false, "l_only"),
+        "L" => (true, false, "_l_only"),
         "R" => (false, true, "_r_only"),
         "LR" => (true, true, ""),
         _ => {
