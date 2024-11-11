@@ -39,7 +39,7 @@ pub fn validate_file_exist(filename: &str) -> Result<(), Box<dyn std::error::Err
     Ok(())
 }
 
-fn file_override_check(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn file_override_check(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut input = String::new();
     print!("Do you want to overwrite [{}]? [y/N] ", filename);
     io::stdout().flush().unwrap();

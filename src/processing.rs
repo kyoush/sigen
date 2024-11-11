@@ -5,6 +5,7 @@ use crate::commands::gen::WaveFormCommands;
 use crate::fileio;
 
 pub mod gen;
+mod cat;
 
 const CH: u16 = 2; // stereo
 const BITS_PER_SAMPLE: u16 = 16;
@@ -43,7 +44,7 @@ pub fn apply_taper_to_wav(options: &commands::taper::TaperOptions) -> Result<(),
     Ok(())
 }
 
-pub fn signal_generator(args: &commands::gen::GenOptions) -> Result<(), Box<dyn Error>>{
+pub fn signal_generator(args: &commands::gen::GenOptions) -> Result<(), Box<dyn Error>> {
     let common_options = args.waveform.get_common_opt();
     let taper_spec = args.waveform.get_taper_spec();
     let signal_spec = common_options.get_signal_spec(taper_spec);
@@ -103,6 +104,20 @@ pub fn signal_generator(args: &commands::gen::GenOptions) -> Result<(), Box<dyn 
     Ok(())
 }
 
-pub fn cat_wav_files(_options: &commands::wav::WavOptions) -> Result<(), Box<dyn Error>> {
+pub fn cat_wav_files(options: &commands::wav::WavOptions) -> Result<(), Box<dyn Error>> {
+    let (inputs, cat_cmd, output_filename) = options.parse_commands()?;
+    let input_files: indexmap::IndexMap<String, String> = cat::parse_input_files(&inputs)?;
+    let (spec, samples) = cat::parse_cat_commands(input_files, cat_cmd)?;
+
+    let mut override_msg = String::new();
+    if fileio::is_file_exist(output_filename.as_str()) {
+        fileio::file_override_check(output_filename.as_str())?;
+        override_msg = "(file override)".to_string();
+    }
+
+    fileio::wavwrite::write_wav_file(spec, output_filename.as_str(), &samples, true, true)?;
+
+    println!("WAV file [{}] created successfully {}", output_filename, override_msg);
+
     Ok(())
 }
