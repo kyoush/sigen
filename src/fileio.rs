@@ -19,12 +19,24 @@ fn is_wav_file(filename: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn is_file_exist(filename: &str) -> bool {
-    let exists = Path::new(filename).exists();
-    if exists{
-        println!("The file [{}] already exists.", filename);
+pub fn validate_wav_file(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
+    if !is_wav_file(filename) {
+        return Err(format!("The filename must have a .wav extension. [{}]", filename).into());
     }
-    exists
+
+    Ok(())
+}
+
+pub fn is_file_exist(filename: &str) -> bool {
+    Path::new(filename).exists()
+}
+
+pub fn validate_file_exist(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
+    if !is_file_exist(filename) {
+        return Err(format!("File [{}] not found.", filename).into());
+    }
+
+    Ok(())
 }
 
 fn file_override_check(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -120,9 +132,7 @@ pub fn gen_file_name(
         )
     };
 
-    if !is_wav_file(filename.as_str()) {
-        return Err(format!("the filename must have a .wav extension. [{}]", filename).into());
-    }
+    validate_wav_file(filename.as_str())?;
 
     let mut override_msg = String::new();
     if is_file_exist(&filename) {
@@ -154,6 +164,9 @@ pub fn set_output_filename(output_filename: Option<Option<String>>, input_filena
         None => format!("{}_tapered.wav", extract_stem(input_filename)), // use default name
     };
 
+    validate_wav_file(filename.as_str())?;
+    fileinfo.name = filename.clone();
+
     if enable_file_exists_check {
         if is_file_exist(&filename) {
             file_override_check(&filename)?;
@@ -164,12 +177,5 @@ pub fn set_output_filename(output_filename: Option<Option<String>>, input_filena
         fileinfo.exists_msg = "(file override)".to_string();
     }
 
-    fileinfo.name = filename;
-
-    if is_wav_file(&fileinfo.name) {
-        Ok(fileinfo)
-    }else {
-        return Err(format!("the filename must have a .wav extension. [{}]", fileinfo.name).into());
-
-    }
+    Ok(fileinfo)
 }
