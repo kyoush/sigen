@@ -102,3 +102,7 @@ pub fn signal_generator(args: &commands::gen::GenOptions) -> Result<(), Box<dyn 
 
     Ok(())
 }
+
+pub fn cat_wav_files(_options: &commands::wav::WavOptions) -> Result<(), Box<dyn Error>> {
+    Ok(())
+}
