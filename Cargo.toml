@@ -10,7 +10,7 @@ name = "sigen"
 path = "src/main.rs"
 
 [dependencies]
-clap = { version = "4.5.20", features = ["derive"] }
-hound = "3.5.1"
-rand = "0.8.5"
-rtaper = { git = "https://github.com/kyoush/rtaper.git" }
+clap = { version = "4", features = ["derive"] }
+hound = "3"
+rand = "0.8"
+rtaper = { git = "https://github.com/kyoush/rtaper.git", branch = "main" }
