@@ -1,6 +1,6 @@
 [package]
 name = "signal-generator"
-version = "1.1.0"
+version = "1.2.0"
 edition = "2021"
 authors = ["Kyoshiro Kamura <kyoshiro.kamura@gmail.com>"]
 license = "GPL-2.0-only"
@@ -10,7 +10,8 @@ name = "sigen"
 path = "src/main.rs"
 
 [dependencies]
-clap = { version = "4.5.20", features = ["derive"] }
-hound = "3.5.1"
-rand = "0.8.5"
-rtaper = { git = "https://github.com/kyoush/rtaper.git" }
+clap = { version = "4", features = ["derive"] }
+hound = "3"
+indexmap = "2"
+rand = "0.8"
+rtaper = { git = "https://github.com/kyoush/rtaper.git", branch = "main" }

@@ -14,6 +14,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         commands::Commands::Taper(opt) => {
             processing::apply_taper_to_wav(&opt)?;
         }
+        commands::Commands::Wav(opt) => {
+            processing::cat_wav_files(&opt)?;
+        }
     }
 
     Ok(())

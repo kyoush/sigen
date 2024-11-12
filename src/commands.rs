@@ -4,6 +4,7 @@ use super::processing;
 pub mod gen;
 pub mod common;
 pub mod taper;
+pub mod wav;
 
 // default parameters
 pub const AMP_MIN: f64 = 0.0;
@@ -34,5 +35,6 @@ pub enum Commands {
     /// apply taper processing on existing wav file
     Taper(taper::TaperOptions),
 
-    // @todo cat to be extended.
+    /// concatenates multiple WAV files into a single file
+    Wav(wav::WavOptions),
 }

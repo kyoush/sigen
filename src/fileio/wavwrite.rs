@@ -1,7 +1,5 @@
 use hound::{WavSpec, WavWriter};
 
-use super::is_wav_file;
-
 pub fn write_wav_file(
     spec: WavSpec,
     filename: &str,
@@ -9,9 +7,7 @@ pub fn write_wav_file(
     enable_l: bool,
     enable_r: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !is_wav_file(filename) {
-        return Err(format!("The filename must have a .wav extension. [{}]", filename).into());
-    }
+    super::validate_wav_file(filename)?;
 
     let mut writer = WavWriter::create(filename, spec)?;
 

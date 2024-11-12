@@ -1,5 +1,6 @@
 use clap::Args;
 use rtaper::TaperSpec; 
+use crate::processing::gen::SignalSpec;
 
 #[derive(Args, Clone, Debug)]
 pub struct CommonOptions {
@@ -40,8 +41,8 @@ pub struct CommonOptions {
 }
 
 impl CommonOptions {
-    pub fn get_signal_spec(&self, taper_spec: TaperSpec) -> super::processing::SignalSpec {
-        super::processing::SignalSpec {
+    pub fn get_signal_spec(&self, taper_spec: TaperSpec) -> SignalSpec {
+        SignalSpec {
             amp: super::processing::value_verify(self.amplitude, super::AMP_MIN, super::AMP_MAX),
             ch: self.channels.clone(),
             fs: self.rate_of_sample,

@@ -42,7 +42,7 @@ impl WaveFormCommands {
             WaveFormCommands::Pwm(opt) => &opt.taper_opt,
         };
 
-        processing::get_taper_spec(opt)
+        processing::gen::get_taper_spec(opt)
     }
 
     pub fn get_fileinfo(&self, fs: i32) -> (&str, i32, i32) {
