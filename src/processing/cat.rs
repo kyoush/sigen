@@ -50,40 +50,124 @@ fn concatenate_no_interval(
     let mut spec:  Option<WavSpec> = None;
 
     for(_, filename) in input_files {
-        let (read_buf, wavspec) = fileio::wavread::read_wav_file(filename.as_str())?;
-        spec = Some(wavspec);
+        let (read_buf, tmp_spec) = fileio::wavread::read_wav_file(filename.as_str())?;
+
+        if spec.is_none() {
+            spec = Some(tmp_spec);
+        }
 
         if samples.is_empty() {
-            let num_ch = spec.unwrap().channels as usize;
-            samples = vec![Vec::new(); num_ch];
+            samples.extend(read_buf);
         }else {
-            append_stereo_signal(&read_buf, &mut samples);
+            append_stereo_signal(&read_buf, samples);
         }
     }
 
-    match spec {
-        Some(_) => { return Ok((spec, samples)); }
-        None => { return Err("WavSpec is not initialized".into()); }
+    spec.ok_or_else(|| "spec is not set".into())
+}
+
+fn append_zeros(
+    duration: &i32,
+    fs: &u32,
+    samples: &mut Vec<Vec<f64>>,
+) {
+    let points = ((*duration as f32 * *fs as f32) / 1000.0) as usize;
+    for col in samples.iter_mut() {
+        col.extend(std::iter::repeat(0.0).take(points));
     }
 }
 
-pub fn parse_cat_commands(input_files:IndexMap<String, String>, cat_cmd: Option<Vec<String>>) -> Result<(WavSpec, Vec<Vec<f64>>), Box<dyn Error>> {
-    let mut samples: Vec<Vec<f64>> = Vec::new();
-    let mut spec: Option<WavSpec> = None;
+fn is_specify_key(cat_commands: &Vec<String>) -> bool{
+    cat_commands.iter().any(|cmd| cmd.parse::<i32>().is_err())
+}
 
-    match cat_cmd {
-        Some(cmd) => {
-            for hoge in cmd {
-                println!("cat_cmd: {}", hoge);
+fn do_cat_commands(
+    cmd: Vec<String>,
+    samples: &mut Vec<Vec<f64>>,
+    filemap: IndexMap<String, String>,
+) -> Result<WavSpec, Box<dyn Error>>{
+    let mut spec: Option<WavSpec> = None;
+    let flag = is_specify_key(&cmd);
+
+    let mut i: usize = 0;
+    for (_, cat_command) in cmd.iter().enumerate() {
+        let (filename, duration) = match cat_command.parse::<i32>() {
+            Ok(d) => {
+                if i < filemap.len() && !flag {
+                    let (_, filename) = filemap.get_index(i).unwrap();
+                    (Some(filename.clone()), Some(d))
+                }else {
+                    (None, Some(d))
+                }
+            }
+            Err(_) => {
+                let f = filemap.get(cat_command).ok_or_else(|| format!("key: [{}] is not found", cat_command))?;
+                (Some(f.clone()), None)
+            }
+        };
+
+        if filename.is_some() {
+            let (read_buf, tmp_spec) = fileio::wavread::read_wav_file(filename.unwrap().as_str())?;
+
+            if spec.is_none() {
+                spec = Some(tmp_spec);
+            }
+
+            if samples.is_empty() {
+                *samples = read_buf;
+            }else {
+                append_stereo_signal(&read_buf, samples);
             }
         }
-        None => {
-            (spec, samples) = concatenate_no_interval(input_files)?;
+
+        if duration.is_some() {
+            if spec.is_none() {
+                let (_, tmp_filename) = filemap.get_index(0).unwrap();
+                let (_, tmp_spec) = fileio::wavread::read_wav_file(tmp_filename)?;
+                spec = Some(tmp_spec);
+            }
+
+            if samples.is_empty() {
+                let points = (duration.unwrap() as f64 / 1000.0 * spec.unwrap().sample_rate as f64) as usize;
+                *samples = vec![vec![0.0; points]; spec.unwrap().channels as usize];
+            }else {
+                append_zeros(&duration.unwrap(), &spec.unwrap().sample_rate, samples);
+            }
         }
+
+        i += 1;
     }
 
-    match spec{
-        Some(val) => { return Ok((val, samples)); }
-        None => { return Err("WavSpec is not initialized".into()); }
+    while i < filemap.len() && !flag {
+        let (_, f) = filemap.get_index(i).unwrap();
+        let (read_buf, tmp_spec) = fileio::wavread::read_wav_file(f)?;
+
+        if spec.is_none() {
+            spec = Some(tmp_spec);
+        }
+
+        append_stereo_signal(&read_buf, samples);
+
+        i += 1;
     }
+
+    spec.ok_or_else(|| "spec is not set".into())
+}
+
+pub fn parse_cat_commands(
+    input_files:IndexMap<String, String>,
+    cat_cmd: Option<Vec<String>>,
+) -> Result<(WavSpec, Vec<Vec<f64>>), Box<dyn Error>> {
+    let mut samples: Vec<Vec<f64>> = Vec::new();
+
+    let spec = match cat_cmd {
+        Some(cat_commands_vec) => {
+            do_cat_commands(cat_commands_vec, &mut samples, input_files)?
+        }
+        None => {
+            concatenate_no_interval(input_files, &mut samples)?
+        }
+    };
+
+    Ok((spec, samples))
 }
