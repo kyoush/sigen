@@ -13,7 +13,7 @@ name: signal generator => sig. gen. => sigen
 ## Usage
 
 ```
-sigen help
+$ sigen help
 A tool for generating WAV files of various signal types
 
 Usage: sigen <COMMAND>
@@ -55,7 +55,7 @@ Options:
   - PWM (pulse train)
 
 ```
-sigen gen sine -h
+$ sigen gen sine -h
 generate a wav file with a sine wave
 
 Usage: sigen gen sine [OPTIONS]
@@ -71,12 +71,12 @@ Options:
           Sample Rate of signal [default: 44100]
   -o, --output-filename <OUTPUT_FILENAME>
           Output Filename
-  -d, --duration <DURATION>
-          duration of the signal in seconds [default: -1]
   -l, --length-of-taper <LENGTH_OF_TAPER>
           length of taper set this to zero to disable tapering [default: 4096]
   -w, --window-type <WINDOW_TYPE>
           type of taper [default: linear] [possible values: linear, hann, cos, blackman]
+  -d, --duration <DURATION>
+          duration of the signal in seconds [default: 5]
   -h, --help
           Print help
 ```
@@ -110,7 +110,7 @@ WAV file [tsp_500hz_to_500hz_1s.wav] created successfully
 ## apply taper to wav
 
 ```
-sigen taper -h
+$ sigen taper -h
 apply taper processing on existing wav file
 
 Usage: sigen taper [OPTIONS] <INPUT>
@@ -153,7 +153,7 @@ WAV file [output.wav] created successfully
 ## concatnate multiple wav files
 
 ```
-sigen wav <INPUTS> cat [CAT_COMMANDS] output <OUTPUT>
+$ sigen wav <INPUTS> cat [CAT_COMMANDS] output <OUTPUT>
 ```
 
 - If CAT_COMMANDS is omitted, the input files will be concatenated as they are.
