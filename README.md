@@ -10,9 +10,26 @@ You can control parameters such as length, frequency, and channels through comma
 
 name: signal generator => sig. gen. => sigen
 
-## Usage: sigen \<COMMAND\>
+## Usage
 
-### generate wav file
+```
+sigen help
+A tool for generating WAV files of various signal types
+
+Usage: sigen <COMMAND>
+
+Commands:
+  gen    generate a wav file
+  taper  apply taper processing on existing wav file
+  wav    concatenates multiple WAV files into a single file
+  help   Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help     Print help
+  -V, --version  Print version
+```
+
+## generate wav file
 
 ```
 $ sigen gen -h
@@ -38,17 +55,24 @@ Options:
   - PWM (pulse train)
 
 ```
-sigen taper -h
-apply taper processing on existing wav file
+sigen gen sine -h
+generate a wav file with a sine wave
 
-Usage: sigen taper [OPTIONS] <INPUT>
-
-Arguments:
-  <INPUT>  input filename
+Usage: sigen gen sine [OPTIONS]
 
 Options:
-  -o, --output [<OUTPUT>]
-          Output filename. If specified without an argument, input file will be overridden
+  -f, --frequency <FREQUENCY>
+          Frequency of the sine wave in Hz [default: 440]
+  -a, --amplitude <AMPLITUDE>
+          the maximum absolute value of the signal samplitude [default: 0.45]
+  -c, --channels <CHANNELS>
+          Which channel generate [default: LR] [possible values: L, R, LR]
+  -r, --rate-of-sample <RATE_OF_SAMPLE>
+          Sample Rate of signal [default: 44100]
+  -o, --output-filename <OUTPUT_FILENAME>
+          Output Filename
+  -d, --duration <DURATION>
+          duration of the signal in seconds [default: -1]
   -l, --length-of-taper <LENGTH_OF_TAPER>
           length of taper set this to zero to disable tapering [default: 4096]
   -w, --window-type <WINDOW_TYPE>
@@ -57,31 +81,7 @@ Options:
           Print help
 ```
 
-### apply taper to wav
-
-- applying tapering to the existing wav file
-
-```
-./sigen taper -h
-apply taper processing on existing wav file
-
-Usage: sigen taper [OPTIONS] <FILENAME>
-
-Arguments:
-  <FILENAME>  the input filename
-
-Options:
-  -l, --length-of-taper <LENGTH_OF_TAPER>
-          length of taper set this to zero to disable tapering [default: 4096]
-  -w, --window-type <WINDOW_TYPE>
-          [default: linear] [possible values: linear, hann, cos, blackman]
-  -h, --help
-          Print help
-```
-
-## example
-
-### generate
+### examples
 
 ```bash
 # generate sine wave using default value
@@ -107,7 +107,29 @@ $ sigen gen tsp -t log -s 500 -e 5000 -a 1 -l 0 -d 1
 WAV file [tsp_500hz_to_500hz_1s.wav] created successfully
 ```
 
-### tapering
+## apply taper to wav
+
+```
+sigen taper -h
+apply taper processing on existing wav file
+
+Usage: sigen taper [OPTIONS] <INPUT>
+
+Arguments:
+  <INPUT>  input filename
+
+Options:
+  -o, --output [<OUTPUT>]
+          Output filename. If specified without an argument, input file will be overridden
+  -l, --length-of-taper <LENGTH_OF_TAPER>
+          length of taper set this to zero to disable tapering [default: 4096]
+  -w, --window-type <WINDOW_TYPE>
+          type of taper [default: linear] [possible values: linear, hann, cos, blackman]
+  -h, --help
+          Print help
+```
+
+### examples
 
 ```bash
 # tapering to sine_440hz_30.wav
@@ -126,6 +148,38 @@ WAV file [sine_440hz_5s.wav] created successfully (file override)
 # you can specify output filename
 $ sigen taper sine_440hz_5s.wav -o output.wav
 WAV file [output.wav] created successfully
+```
+
+## concatnate multiple wav files
+
+```
+sigen wav <INPUTS> cat [CAT_COMMANDS] output <OUTPUT>
+```
+
+- If CAT_COMMANDS is omitted, the input files will be concatenated as they are.
+- It has command-line options very similar to the PDF merging tool [pdftk](https://www.pdflabs.com/docs/pdftk-man-page/).
+
+```bash
+# just concatenated multiple files
+$ sigen wav input1.wav input2.wav cat output out.wav
+```
+
+```bash
+# Concatenate the A and B WAV files with a 1ms interval in between.
+$ sigen wav A=input1.wav B=input2.wav cat A 100msec B output out.wav
+# The following shorthand notation produces the same result as above.
+$ sigen wav input1.wav input2.wav cat 100msec output out.wav
+```
+
+```bash
+$ sigen wav A=input1.wav B=input2.wav C=input3.wav cat A 1s B 2s C output out.wav
+# The following shorthand notation produces the same result as above.
+$ sigen wav input1.wav input2.wav input3.wav cat 1s 2s output out.wav
+```
+
+```bash
+# The following complex operation cannot use shorthand notation.
+$ sigen wav A=input1.wav B=input2.wav C=input3.wav cat A 100msec B 50msec A 100msec B 1s C output out.wav
 ```
 
 ## License
