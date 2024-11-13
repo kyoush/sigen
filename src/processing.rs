@@ -44,10 +44,11 @@ pub fn apply_taper_to_wav(options: &commands::taper::TaperOptions) -> Result<(),
     Ok(())
 }
 
-pub fn signal_generator(args: &commands::gen::GenOptions) -> Result<(), Box<dyn Error>> {
+pub fn signal_generator(args: &mut commands::gen::GenOptions) -> Result<(), Box<dyn Error>> {
     let common_options = args.waveform.get_common_opt();
+    let d = args.waveform.get_duration_in_sec()?;
     let taper_spec = args.waveform.get_taper_spec();
-    let signal_spec = common_options.get_signal_spec(taper_spec);
+    let signal_spec = common_options.get_signal_spec(taper_spec, d);
 
     let (enable_l, enable_r, filename_ch) = match signal_spec.ch.as_str() {
         "L" => (true, false, "_l_only"),
@@ -66,7 +67,7 @@ pub fn signal_generator(args: &commands::gen::GenOptions) -> Result<(), Box<dyn 
         startf,
         endf,
         filename_ch,
-        signal_spec.d,
+        &args.waveform.get_duration_cmd(),
     )?;
 
     // generate signals

@@ -67,18 +67,21 @@ fn concatenate_no_interval(
 }
 
 fn append_zeros(
-    duration: &i32,
+    duration: &f64,
     fs: &u32,
     samples: &mut Vec<Vec<f64>>,
 ) {
-    let points = ((*duration as f32 * *fs as f32) / 1000.0) as usize;
+    let points = (*duration * *fs as f64) as usize;
     for col in samples.iter_mut() {
         col.extend(std::iter::repeat(0.0).take(points));
     }
 }
 
 fn is_specify_key(cat_commands: &Vec<String>) -> bool{
-    cat_commands.iter().any(|cmd| cmd.parse::<i32>().is_err())
+    cat_commands.iter().any(|cmd| {
+        let first = cmd.chars().next().unwrap().to_string();
+        first.parse::<i32>().is_err()
+    })
 }
 
 fn do_cat_commands(
@@ -91,8 +94,11 @@ fn do_cat_commands(
 
     let mut i: usize = 0;
     for (_, cat_command) in cmd.iter().enumerate() {
-        let (filename, duration) = match cat_command.parse::<i32>() {
-            Ok(d) => {
+        let first = cat_command.chars().next().unwrap().to_string();
+        let (filename, duration) = match first.parse::<i32>() {
+            Ok(_) => { // specify duration
+                let d = crate::processing::gen::parse_duration(cat_command)?;
+
                 if i < filemap.len() && !flag {
                     let (_, filename) = filemap.get_index(i).unwrap();
                     (Some(filename.clone()), Some(d))
@@ -100,7 +106,7 @@ fn do_cat_commands(
                     (None, Some(d))
                 }
             }
-            Err(_) => {
+            Err(_) => { // specify key
                 let f = filemap.get(cat_command).ok_or_else(|| format!("key: [{}] is not found", cat_command))?;
                 (Some(f.clone()), None)
             }
@@ -128,7 +134,7 @@ fn do_cat_commands(
             }
 
             if samples.is_empty() {
-                let points = (duration.unwrap() as f64 / 1000.0 * spec.unwrap().sample_rate as f64) as usize;
+                let points = (duration.unwrap() * spec.unwrap().sample_rate as f64) as usize;
                 *samples = vec![vec![0.0; points]; spec.unwrap().channels as usize];
             }else {
                 append_zeros(&duration.unwrap(), &spec.unwrap().sample_rate, samples);

@@ -31,22 +31,15 @@ pub struct CommonOptions {
         short, long,
     )]
     pub output_filename: Option<String>,
-
-    /// duration of the signal in seconds.
-    #[arg(
-        short, long,
-        default_value_t = super::D_DEF,
-    )]
-    pub duration: i32,
 }
 
 impl CommonOptions {
-    pub fn get_signal_spec(&self, taper_spec: TaperSpec) -> SignalSpec {
+    pub fn get_signal_spec(&self, taper_spec: TaperSpec, d: f64) -> SignalSpec {
         SignalSpec {
             amp: super::processing::value_verify(self.amplitude, super::AMP_MIN, super::AMP_MAX),
             ch: self.channels.clone(),
             fs: self.rate_of_sample,
-            d: self.duration,
+            d: d,
             taper_spec: taper_spec,
         }
     }
