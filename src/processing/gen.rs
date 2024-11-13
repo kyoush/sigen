@@ -8,7 +8,7 @@ pub struct SignalSpec {
     pub amp: f64,
     pub ch: String,
     pub fs: i32,
-    pub d: i32,
+    pub d: f64,
     pub taper_spec: TaperSpec,
 }
 
@@ -27,8 +27,36 @@ pub fn get_taper_spec(opt: &TaperSpecOptions) -> TaperSpec {
     }
 }
 
+fn trim_end_to_i32(cmd: &str, pattern: &str) -> Result<f64, String> {
+    if cmd.to_lowercase().ends_with(pattern) {
+        let trim = cmd.trim_end_matches(&pattern);
+        trim.parse::<f64>().map_err(|e| e.to_string())
+    }else {
+        Err("partern not found end".to_string())
+    }
+}
+
+pub fn parse_duration(duration_cmd: &str) -> Result<f64, Box<dyn Error>> {
+    match duration_cmd.parse::<f64>() {
+        Ok(val) => { Ok(val) }
+        Err(_) => {
+            if let Ok(val) = trim_end_to_i32(duration_cmd, "m")          { Ok(val / 1000.0) }
+            else if let Ok(val) = trim_end_to_i32(duration_cmd, "msec")  { Ok(val / 1000.0) }
+            else if let Ok(val) = trim_end_to_i32(duration_cmd, "s")     { Ok(val) }
+            else if let Ok(val) = trim_end_to_i32(duration_cmd, "sec")   { Ok(val) }
+            else if let Ok(val) = trim_end_to_i32(duration_cmd, "min")   { Ok(val * 60.0) }
+            else if let Ok(val) = trim_end_to_i32(duration_cmd, "h")     { Ok(val * 60.0 * 60.0) }
+            else if let Ok(val) = trim_end_to_i32(duration_cmd, "hour")  { Ok(val * 60.0 * 60.0) }
+            else if let Ok(val) = trim_end_to_i32(duration_cmd, "hours") { Ok(val * 60.0 * 60.0) }
+            else {
+                return Err(format!("cannot parse duration [{}]", duration_cmd).into())
+            }
+        }
+    }
+}
+
 pub fn generate_sine_wave(spec: &SignalSpec, frequency: i32) -> Result<Vec<f64>, Box<dyn Error>> {
-    let sample_count = (spec.d * spec.fs) as usize;
+    let sample_count = (spec.d * spec.fs as f64) as usize;
     let mut samples = Vec::with_capacity(sample_count);
     for i in 0..sample_count {
         let t = i as f32 / spec.fs as f32;
@@ -42,7 +70,7 @@ pub fn generate_sine_wave(spec: &SignalSpec, frequency: i32) -> Result<Vec<f64>,
 }
 
 pub fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
-    let sample_count = (spec.d * spec.fs) as usize;
+    let sample_count = (spec.d * spec.fs as f64) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
     for _ in 0..sample_count {
@@ -56,7 +84,7 @@ pub fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error
 }
 
 fn generate_linear_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Result<Vec<f64>, Box<dyn Error>> {
-    let sample_count = (spec.d * spec.fs) as usize;
+    let sample_count = (spec.d * spec.fs as f64) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
     for n in 0..sample_count {
@@ -69,12 +97,12 @@ fn generate_linear_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Result
 }
 
 fn generate_log_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Result<Vec<f64>, Box<dyn Error>> {
-    let sample_count = (spec.d * spec.fs) as usize;
+    let sample_count = (spec.d * spec.fs as f64) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
     for n in 0..sample_count {
         let t = n as f64 / spec.fs as f64;
-        let freq = lowfreq * ((highfreq / lowfreq).powf(t / spec.d as f64));
+        let freq = lowfreq * ((highfreq / lowfreq).powf(t / spec.d));
         let phase = 2.0 * PI as f64 * freq * t;
         samples.push(spec.amp * phase.sin());
     }
@@ -102,13 +130,13 @@ pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: String, lowfreq: i32, hi
 }
 
 pub fn generate_pwm_signal(spec: &SignalSpec, freq: i32, duty: u32) -> Result<Vec<f64>, Box<dyn Error>> {
-    let mut samples = vec![0.0; (spec.fs * spec.d) as usize];
+    let mut samples = vec![0.0; (spec.d * spec.fs as f64) as usize];
     let period_samples = spec.fs / freq;
     let high_samples = (period_samples  as f64 * (duty as f64 / 100.0)) as usize;
 
-    for period_start_point in (0..spec.fs * spec.d).step_by(period_samples as usize) {
+    for period_start_point in (0..(spec.d * spec.fs as f64) as i32).step_by(period_samples as usize) {
         let end = period_start_point + high_samples as i32;
-        if end > spec.fs * spec.d {
+        if end > (spec.d * spec.fs as f64) as i32 {
             break;
         }
         for high_point in period_start_point..end {

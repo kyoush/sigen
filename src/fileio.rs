@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::path::Path;
 use std::io::{self, Write};
 
@@ -19,7 +20,7 @@ fn is_wav_file(filename: &str) -> bool {
         .unwrap_or(false)
 }
 
-pub fn validate_wav_file(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn validate_wav_file(filename: &str) -> Result<(), Box<dyn Error>> {
     if !is_wav_file(filename) {
         return Err(format!("The filename must have a .wav extension. [{}]", filename).into());
     }
@@ -31,7 +32,7 @@ pub fn is_file_exist(filename: &str) -> bool {
     Path::new(filename).exists()
 }
 
-pub fn validate_file_exist(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn validate_file_exist(filename: &str) -> Result<(), Box<dyn Error>> {
     if !is_file_exist(filename) {
         return Err(format!("File [{}] not found.", filename).into());
     }
@@ -39,7 +40,7 @@ pub fn validate_file_exist(filename: &str) -> Result<(), Box<dyn std::error::Err
     Ok(())
 }
 
-pub fn file_override_check(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn file_override_check(filename: &str) -> Result<(), Box<dyn Error>> {
     let mut input = String::new();
     print!("Do you want to overwrite [{}]? [y/N] ", filename);
     io::stdout().flush().unwrap();
@@ -57,7 +58,7 @@ pub fn file_override_check(filename: &str) -> Result<(), Box<dyn std::error::Err
     }
 }
 
-fn output_filesize_check(filesize: usize) -> Result<(), Box<dyn std::error::Error>> {
+fn output_filesize_check(filesize: usize) -> Result<(), Box<dyn Error>> {
     if filesize > FILESIZE_WARN_LEVEL {
         let mut input = String::new();
         print!(
@@ -93,15 +94,22 @@ fn freq_format(freq: i32, prefix: &str) -> String {
     }
 }
 
-fn seconds_format(sec: i32) -> String{
-    if sec >= 60 {
-        if sec % 60 == 0 {
-            format!("_{}min", sec / 60)
-        } else {
-            format!("_{}min{}s", sec / 60, sec % 60)
+fn duration_format(d_cmd: &str) -> String {
+    match d_cmd.parse::<i32>() {
+        Ok(val) => {
+            if val >= 60 {
+                if val % 60 == 0 {
+                    format!("_{}min", val / 60)
+                } else {	
+                    format!("_{}min{}s", val / 60, val % 60)
+                }
+            } else {
+                format!("_{}s", val)
+            }
         }
-    } else {
-        format!("_{}s", sec)
+        Err(_) => {
+            format!("_{}", d_cmd)
+        }
     }
 }
 
@@ -118,13 +126,13 @@ pub fn gen_file_name(
     start_freq: i32,
     end_freq: i32,
     filename_ch: &str,
-    d: i32) -> Result<FileInfo, Box<dyn std::error::Error>> {
+    d_cmd: &str) -> Result<FileInfo, Box<dyn Error>> {
     let filename = if let Some(name) = output_filename {
         name.clone()
     }else {
         let filename_start_freq = freq_format(start_freq, "");
         let filename_end_freq = freq_format(end_freq, "to_");
-        let filename_duration = seconds_format(d);
+        let filename_duration = duration_format(d_cmd);
 
         format!(
             "{}{}{}{}{}.wav",
@@ -132,7 +140,7 @@ pub fn gen_file_name(
         )
     };
 
-    validate_wav_file(filename.as_str())?;
+    validate_wav_file(&filename)?;
 
     let mut override_msg = String::new();
     if is_file_exist(&filename) {
@@ -146,7 +154,7 @@ pub fn gen_file_name(
     })
 }
 
-pub fn set_output_filename(output_filename: Option<Option<String>>, input_filename: &str) -> Result<FileInfo, Box<dyn std::error::Error>> {
+pub fn set_output_filename(output_filename: Option<Option<String>>, input_filename: &str) -> Result<FileInfo, Box<dyn Error>> {
     let mut fileinfo = FileInfo{
         name: String::new(),
         exists_msg: String::new(),

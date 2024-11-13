@@ -1,7 +1,7 @@
-use clap::{Args, Subcommand};
 use super::common;
-use rtaper::TaperSpec;
 use super::processing;
+use clap::{Args, Subcommand};
+use rtaper::TaperSpec;
 
 #[derive(Args, Debug, Clone)]
 pub struct GenOptions {
@@ -45,41 +45,42 @@ impl WaveFormCommands {
         processing::gen::get_taper_spec(opt)
     }
 
+    pub fn get_duration_cmd(&self) -> &String {
+        match self {
+            WaveFormCommands::Sine(opt) => &opt.duration,
+            WaveFormCommands::White(opt) => &opt.duration,
+            WaveFormCommands::Tsp(opt) => &opt.duration,
+            WaveFormCommands::Pwm(opt) => &opt.duration,
+        }
+    }
+
+    pub fn get_duration_in_sec(&self) -> Result<f64, Box<dyn std::error::Error>> {
+        match self {
+            WaveFormCommands::Sine(opt) => crate::processing::gen::parse_duration(&opt.duration),
+            WaveFormCommands::White(opt) => crate::processing::gen::parse_duration(&opt.duration),
+            WaveFormCommands::Tsp(opt) => crate::processing::gen::parse_duration(&opt.duration),
+            WaveFormCommands::Pwm(opt) => crate::processing::gen::parse_duration(&opt.duration),
+        }
+    }
+
     pub fn get_fileinfo(&self, fs: i32) -> (&str, i32, i32) {
         let freq_disable = -1;
         match self {
             WaveFormCommands::Sine(opt) => {
                 let f_verified = super::processing::value_verify(opt.frequency, 0, fs / 2);
-                (
-                    "sine",
-                    f_verified,
-                    freq_disable,
-                )
-            },
-            WaveFormCommands::White(_) => {
-                (
-                    "white",
-                    freq_disable,
-                    freq_disable,
-                )
-            },
+                ("sine", f_verified, freq_disable)
+            }
+            WaveFormCommands::White(_) => ("white", freq_disable, freq_disable),
             WaveFormCommands::Tsp(opt) => {
                 let endf_verified = super::processing::value_verify(opt.endf, 0, fs / 2);
-                let startf_verified: i32 = super::processing::value_verify(opt.startf, 0, endf_verified);
-                (
-                    "tsp",
-                    startf_verified,
-                    endf_verified,
-                )
-            },
+                let startf_verified: i32 =
+                    super::processing::value_verify(opt.startf, 0, endf_verified);
+                ("tsp", startf_verified, endf_verified)
+            }
             WaveFormCommands::Pwm(opt) => {
                 let f_verified = super::processing::value_verify(opt.frequency, 0, fs / 2);
-                (
-                    "pwm",
-                    f_verified,
-                    freq_disable,
-                )
-            },
+                ("pwm", f_verified, freq_disable)
+            }
         }
     }
 }
@@ -98,6 +99,13 @@ pub struct SineOptions {
 
     #[command(flatten)]
     pub taper_opt: common::TaperSpecOptions,
+
+    /// duration of the signal in seconds.
+    #[arg(
+        short, long,
+        default_value_t = super::D_DEF_LONG.to_string(),
+    )]
+    pub duration: String,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -107,6 +115,13 @@ pub struct WhiteOptions {
 
     #[command(flatten)]
     pub taper_opt: common::TaperSpecOptions,
+
+    /// duration of the signal in seconds.
+    #[arg(
+        short, long,
+        default_value_t = super::D_DEF_LONG.to_string(),
+    )]
+    pub duration: String,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -138,6 +153,13 @@ pub struct TspOptions {
 
     #[command(flatten)]
     pub taper_opt: common::TaperSpecOptions,
+
+    /// duration of the signal in seconds.
+    #[arg(
+        short, long,
+        default_value_t = super::D_DEF_SHORT.to_string(),
+    )]
+    pub duration: String,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -161,4 +183,11 @@ pub struct PwmOptions {
 
     #[command(flatten)]
     pub taper_opt: common::TaperSpecOptions,
+
+    /// duration of the signal in seconds.
+    #[arg(
+        short, long,
+        default_value_t = super::D_DEF_LONG.to_string(),
+    )]
+    pub duration: String,
 }
