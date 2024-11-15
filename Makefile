@@ -3,7 +3,10 @@
 release_dir := "./"
 
 release:
-	CARGO_TARGET_DIR=${release_dir} cargo build --release
+	cargo build --release
+	cargo build --target x86_64-pc-windows-gnu --release
+	cp target/release/sigen release/
+	cp target/x86_64-pc-windows-gnu/release/sigen.exe release/
 
 clean:
 	cargo clean

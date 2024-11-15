@@ -22,6 +22,9 @@ pub enum WaveFormCommands {
 
     /// generate a wav file with a PWM (pulse train)
     Pwm(PwmOptions),
+
+    /// generate a wav file with zeros
+    Zeros(ZerosOptions),
 }
 
 impl WaveFormCommands {
@@ -31,15 +34,17 @@ impl WaveFormCommands {
             WaveFormCommands::White(opt) => &opt.options,
             WaveFormCommands::Tsp(opt) => &opt.options,
             WaveFormCommands::Pwm(opt) => &opt.options,
+            WaveFormCommands::Zeros(opt) => &opt.options,
         }
     }
 
-    pub fn get_taper_spec(&self) -> TaperSpec {
+    pub fn get_taper_spec(&self) -> Option<TaperSpec> {
         let opt = match self {
-            WaveFormCommands::Sine(opt) => &opt.taper_opt,
-            WaveFormCommands::White(opt) => &opt.taper_opt,
-            WaveFormCommands::Tsp(opt) => &opt.taper_opt,
-            WaveFormCommands::Pwm(opt) => &opt.taper_opt,
+            WaveFormCommands::Sine(opt) => Some(&opt.taper_opt),
+            WaveFormCommands::White(opt) => Some(&opt.taper_opt),
+            WaveFormCommands::Tsp(opt) => Some(&opt.taper_opt),
+            WaveFormCommands::Pwm(opt) => Some(&opt.taper_opt),
+            WaveFormCommands::Zeros(_) => None,
         };
 
         processing::gen::get_taper_spec(opt)
@@ -51,6 +56,7 @@ impl WaveFormCommands {
             WaveFormCommands::White(opt) => &opt.duration,
             WaveFormCommands::Tsp(opt) => &opt.duration,
             WaveFormCommands::Pwm(opt) => &opt.duration,
+            WaveFormCommands::Zeros(opt) => &opt.duration,
         }
     }
 
@@ -60,6 +66,7 @@ impl WaveFormCommands {
             WaveFormCommands::White(opt) => crate::processing::gen::parse_duration(&opt.duration),
             WaveFormCommands::Tsp(opt) => crate::processing::gen::parse_duration(&opt.duration),
             WaveFormCommands::Pwm(opt) => crate::processing::gen::parse_duration(&opt.duration),
+            WaveFormCommands::Zeros(opt) => crate::processing::gen::parse_duration(&opt.duration),
         }
     }
 
@@ -81,6 +88,7 @@ impl WaveFormCommands {
                 let f_verified = super::processing::value_verify(opt.frequency, 0, fs / 2);
                 ("pwm", f_verified, freq_disable)
             }
+            WaveFormCommands::Zeros(_) => { ("zeros", -1, -1) }
         }
     }
 }
@@ -183,6 +191,19 @@ pub struct PwmOptions {
 
     #[command(flatten)]
     pub taper_opt: common::TaperSpecOptions,
+
+    /// duration of the signal in seconds.
+    #[arg(
+        short, long,
+        default_value_t = super::D_DEF_LONG.to_string(),
+    )]
+    pub duration: String,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct ZerosOptions {
+    #[command(flatten)]
+    pub options: common::CommonOptions,
 
     /// duration of the signal in seconds.
     #[arg(

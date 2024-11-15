@@ -5,6 +5,3 @@ Cargo.lock
 
 target
 !target/release/sigen
-
-release
-!release/sigen
