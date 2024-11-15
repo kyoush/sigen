@@ -28,7 +28,7 @@ where
 }
 
 pub fn apply_taper_to_wav(options: &commands::taper::TaperOptions) -> Result<(), Box<dyn Error>> {
-    let taper_spec = gen::get_taper_spec(&options.taper_opt);
+    let taper_spec = gen::get_taper_spec(Some(&options.taper_opt)).unwrap();
     let (mut samples, spec) = fileio::wavread::read_wav_file(options.input.as_str())?;
     let num_ch = samples.len();
 
@@ -85,6 +85,9 @@ pub fn signal_generator(args: &mut commands::gen::GenOptions) -> Result<(), Box<
         WaveFormCommands::Pwm(pwm_options) => {
             let d_verified = value_verify(pwm_options.percent_of_duty, 0, 100);
             samples = gen::generate_pwm_signal(&signal_spec, startf, d_verified)?;
+        }
+        WaveFormCommands::Zeros(_) => {
+            samples = gen::generate_zeros(&signal_spec)?;
         }
     }
 

@@ -34,7 +34,7 @@ pub struct CommonOptions {
 }
 
 impl CommonOptions {
-    pub fn get_signal_spec(&self, taper_spec: TaperSpec, d: f64) -> SignalSpec {
+    pub fn get_signal_spec(&self, taper_spec: Option<TaperSpec>, d: f64) -> SignalSpec {
         SignalSpec {
             amp: super::processing::value_verify(self.amplitude, super::AMP_MIN, super::AMP_MAX),
             ch: self.channels.clone(),

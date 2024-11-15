@@ -9,21 +9,26 @@ pub struct SignalSpec {
     pub ch: String,
     pub fs: i32,
     pub d: f64,
-    pub taper_spec: TaperSpec,
+    pub taper_spec: Option<TaperSpec>,
 }
 
-pub fn get_taper_spec(opt: &TaperSpecOptions) -> TaperSpec {
-    let taper_type = match opt.window_type.as_str() {
-        "linear" => { WindowType::Linear }
-        "hann" => { WindowType::Hann }
-        "cos" => { WindowType::Cosine }
-        "blackman" => { WindowType::Blackman }
-        _ => { WindowType::Hann }
-    };
-
-    TaperSpec {
-        taper_type: taper_type,
-        taper_length: opt.length_of_taper,
+pub fn get_taper_spec(opt: Option<&TaperSpecOptions>) -> Option<TaperSpec> {
+    match opt {
+        Some(opt) => {
+            let taper_type = match opt.window_type.as_str() {
+                "linear" => { WindowType::Linear }
+                "hann" => { WindowType::Hann }
+                "cos" => { WindowType::Cosine }
+                "blackman" => { WindowType::Blackman }
+                _ => { WindowType::Hann }
+            };
+        
+            Some(TaperSpec {
+                taper_type: taper_type,
+                taper_length: opt.length_of_taper,
+            })
+        }
+        None => { None }
     }
 }
 
@@ -55,6 +60,18 @@ pub fn parse_duration(duration_cmd: &str) -> Result<f64, Box<dyn Error>> {
     }
 }
 
+fn do_apply_taper_both(samples: &mut Vec<f64>, taper_spec: &Option<TaperSpec>) -> Result<Vec<f64>, Box<dyn Error>>{
+    match taper_spec {
+        Some(spec) => {
+            rtaper::apply_taper_both(samples, &spec)?;
+            Ok(samples.to_vec())
+        }
+        None => {
+            return Err("taper spec is not set".into())
+        }
+    }
+}
+
 pub fn generate_sine_wave(spec: &SignalSpec, frequency: i32) -> Result<Vec<f64>, Box<dyn Error>> {
     let sample_count = (spec.d * spec.fs as f64) as usize;
     let mut samples = Vec::with_capacity(sample_count);
@@ -64,8 +81,7 @@ pub fn generate_sine_wave(spec: &SignalSpec, frequency: i32) -> Result<Vec<f64>,
         samples.push(sample);
     }
 
-    rtaper::apply_taper_both(&mut samples, &spec.taper_spec)?;
-
+    do_apply_taper_both(&mut samples, &spec.taper_spec)?;
     Ok(samples)
 }
 
@@ -78,8 +94,7 @@ pub fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error
         samples.push(noise);
     }
 
-    rtaper::apply_taper_both(&mut samples, &spec.taper_spec)?;
-
+    do_apply_taper_both(&mut samples, &spec.taper_spec)?;
     Ok(samples)
 }
 
@@ -124,8 +139,7 @@ pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: String, lowfreq: i32, hi
         return Err("unexpected type of tsp signal".into());
     }
 
-    rtaper::apply_taper_fade_out(&mut samples, &spec.taper_spec)?;
-
+    do_apply_taper_both(&mut samples, &spec.taper_spec)?;
     Ok(samples)
 }
 
@@ -144,7 +158,10 @@ pub fn generate_pwm_signal(spec: &SignalSpec, freq: i32, duty: u32) -> Result<Ve
         }
     }
 
-    rtaper::apply_taper_both(&mut samples, &spec.taper_spec)?;
-
+    do_apply_taper_both(&mut samples, &spec.taper_spec)?;
     Ok(samples)
+}
+
+pub fn generate_zeros(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
+    Ok(vec![0.0; (spec.d * spec.fs as f64) as usize])
 }
