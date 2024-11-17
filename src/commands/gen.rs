@@ -126,7 +126,7 @@ pub struct NoiseOptions {
     #[arg(
         short, long,
         default_value = "white",
-        value_parser = ["white"],
+        value_parser = ["white", "pink"],
     )]
     pub noise_type: String,
 

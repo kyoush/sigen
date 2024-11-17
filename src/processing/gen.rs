@@ -98,9 +98,14 @@ fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
     Ok(samples)
 }
 
+fn generate_pink_noise(_spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
+    return Err("Pink noise generation is not supported yet. Apologies!".into());
+}
+
 pub fn generate_noise(spec: &SignalSpec, noise_type: &str) -> Result<Vec<f64>, Box<dyn Error>> {
     match noise_type {
         "white" => { generate_white_noise(spec) },
+        "pink" => { generate_pink_noise(spec) }
         &_ => { return Err("unknown noise type".into()) }
     }
 }
