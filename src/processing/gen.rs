@@ -85,7 +85,7 @@ pub fn generate_sine_wave(spec: &SignalSpec, frequency: i32) -> Result<Vec<f64>,
     Ok(samples)
 }
 
-pub fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
+fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
     let sample_count = (spec.d * spec.fs as f64) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
@@ -96,6 +96,13 @@ pub fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error
 
     do_apply_taper_both(&mut samples, &spec.taper_spec)?;
     Ok(samples)
+}
+
+pub fn generate_noise(spec: &SignalSpec, noise_type: &str) -> Result<Vec<f64>, Box<dyn Error>> {
+    match noise_type {
+        "white" => { generate_white_noise(spec) },
+        &_ => { return Err("unknown noise type".into()) }
+    }
 }
 
 fn generate_linear_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Result<Vec<f64>, Box<dyn Error>> {

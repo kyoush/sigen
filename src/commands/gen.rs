@@ -14,8 +14,8 @@ pub enum WaveFormCommands {
     /// generate a wav file with a sine wave
     Sine(SineOptions),
 
-    /// generate a wav file with a white noise
-    White(WhiteOptions),
+    /// generate a wav file with a noise
+    Noise(NoiseOptions),
 
     /// generate a wav file with a TSP [Time Stretched Pulse] waveform
     Tsp(TspOptions),
@@ -31,7 +31,7 @@ impl WaveFormCommands {
     pub fn get_common_opt(&self) -> &common::CommonOptions {
         match self {
             WaveFormCommands::Sine(opt) => &opt.options,
-            WaveFormCommands::White(opt) => &opt.options,
+            WaveFormCommands::Noise(opt) => &opt.options,
             WaveFormCommands::Tsp(opt) => &opt.options,
             WaveFormCommands::Pwm(opt) => &opt.options,
             WaveFormCommands::Zeros(opt) => &opt.options,
@@ -41,7 +41,7 @@ impl WaveFormCommands {
     pub fn get_taper_spec(&self) -> Option<TaperSpec> {
         let opt = match self {
             WaveFormCommands::Sine(opt) => Some(&opt.taper_opt),
-            WaveFormCommands::White(opt) => Some(&opt.taper_opt),
+            WaveFormCommands::Noise(opt) => Some(&opt.taper_opt),
             WaveFormCommands::Tsp(opt) => Some(&opt.taper_opt),
             WaveFormCommands::Pwm(opt) => Some(&opt.taper_opt),
             WaveFormCommands::Zeros(_) => None,
@@ -53,7 +53,7 @@ impl WaveFormCommands {
     pub fn get_duration_cmd(&self) -> &String {
         match self {
             WaveFormCommands::Sine(opt) => &opt.duration,
-            WaveFormCommands::White(opt) => &opt.duration,
+            WaveFormCommands::Noise(opt) => &opt.duration,
             WaveFormCommands::Tsp(opt) => &opt.duration,
             WaveFormCommands::Pwm(opt) => &opt.duration,
             WaveFormCommands::Zeros(opt) => &opt.duration,
@@ -63,32 +63,36 @@ impl WaveFormCommands {
     pub fn get_duration_in_sec(&self) -> Result<f64, Box<dyn std::error::Error>> {
         match self {
             WaveFormCommands::Sine(opt) => crate::processing::gen::parse_duration(&opt.duration),
-            WaveFormCommands::White(opt) => crate::processing::gen::parse_duration(&opt.duration),
+            WaveFormCommands::Noise(opt) => crate::processing::gen::parse_duration(&opt.duration),
             WaveFormCommands::Tsp(opt) => crate::processing::gen::parse_duration(&opt.duration),
             WaveFormCommands::Pwm(opt) => crate::processing::gen::parse_duration(&opt.duration),
             WaveFormCommands::Zeros(opt) => crate::processing::gen::parse_duration(&opt.duration),
         }
     }
 
-    pub fn get_fileinfo(&self, fs: i32) -> (&str, i32, i32) {
+    pub fn get_fileinfo(&self, fs: i32) -> (String, i32, i32) {
         let freq_disable = -1;
         match self {
             WaveFormCommands::Sine(opt) => {
                 let f_verified = super::processing::value_verify(opt.frequency, 0, fs / 2);
-                ("sine", f_verified, freq_disable)
+                ("sine".to_string(), f_verified, freq_disable)
             }
-            WaveFormCommands::White(_) => ("white", freq_disable, freq_disable),
+            WaveFormCommands::Noise(opt) => {
+                let noise_type = &opt.noise_type;
+                let filename_type = format!("{}noise", noise_type);
+                (filename_type, freq_disable, freq_disable)
+            }
             WaveFormCommands::Tsp(opt) => {
                 let endf_verified = super::processing::value_verify(opt.endf, 0, fs / 2);
                 let startf_verified: i32 =
                     super::processing::value_verify(opt.startf, 0, endf_verified);
-                ("tsp", startf_verified, endf_verified)
+                ("tsp".to_string(), startf_verified, endf_verified)
             }
             WaveFormCommands::Pwm(opt) => {
                 let f_verified = super::processing::value_verify(opt.frequency, 0, fs / 2);
-                ("pwm", f_verified, freq_disable)
+                ("pwm".to_string(), f_verified, freq_disable)
             }
-            WaveFormCommands::Zeros(_) => { ("zeros", -1, -1) }
+            WaveFormCommands::Zeros(_) => { ("zeros".to_string(), -1, -1) }
         }
     }
 }
@@ -117,7 +121,15 @@ pub struct SineOptions {
 }
 
 #[derive(Args, Debug, Clone)]
-pub struct WhiteOptions {
+pub struct NoiseOptions {
+    // noise type
+    #[arg(
+        short, long,
+        default_value = "white",
+        value_parser = ["white"],
+    )]
+    pub noise_type: String,
+
     #[command(flatten)]
     pub options: common::CommonOptions,
 
