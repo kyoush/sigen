@@ -15,3 +15,4 @@ hound = "3"
 indexmap = "2"
 rand = "0.8"
 rtaper = { git = "https://github.com/kyoush/rtaper.git", branch = "main" }
+rustfft = "6"
