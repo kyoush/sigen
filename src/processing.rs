@@ -76,8 +76,8 @@ pub fn signal_generator(args: &mut commands::gen::GenOptions) -> Result<(), Box<
         WaveFormCommands::Sine(_) => {
             samples = gen::generate_sine_wave(&signal_spec, startf)?;
         }
-        WaveFormCommands::White(_) => {
-            samples = gen::generate_white_noise(&signal_spec)?;
+        WaveFormCommands::Noise(noise_options) => {
+            samples = gen::generate_noise(&signal_spec, &noise_options.noise_type)?;
         }
         WaveFormCommands::Tsp(tsp_options) => {
             samples = gen::generate_tsp_signal(&signal_spec, tsp_options.tsp_type.clone(), startf, endf)?;

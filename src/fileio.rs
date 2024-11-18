@@ -122,7 +122,7 @@ fn extract_stem(input_filename: &str) -> String {
 
 pub fn gen_file_name(
     output_filename: &Option<String>,
-    sig_type: &str,
+    sig_type: String,
     start_freq: i32,
     end_freq: i32,
     filename_ch: &str,
