@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::f32::consts::PI;
+use rustfft::{ FftPlanner, num_complex::Complex };
 use rtaper::{WindowType, TaperSpec};
 
 use crate::commands::common::TaperSpecOptions;
@@ -94,20 +95,58 @@ fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
         samples.push(noise);
     }
 
-    do_apply_taper_both(&mut samples, &spec.taper_spec)?;
     Ok(samples)
 }
 
-fn generate_pink_noise(_spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
-    return Err("Pink noise generation is not supported yet. Apologies!".into());
+fn generate_pink_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
+    let white_noise = generate_white_noise(spec)?
+        .into_iter()
+        .enumerate()
+        .map(|(_, real)| {
+            let c = Complex::new(real, 0.0);
+            c
+        })
+        .collect::<Vec<_>>();
+    let sample_count = white_noise.len();
+
+    let mut planner = FftPlanner::new();
+    let fft = planner.plan_fft_forward(sample_count);
+    let mut spectrum = white_noise.clone();
+    fft.process(&mut spectrum);
+
+    for (i, freq) in spectrum.iter_mut().enumerate() {
+        if i == 0 {
+            continue;
+        }
+        let f = i as f64;
+        let scaling_factor = 1.0 / f.sqrt();
+        freq.re *= scaling_factor;
+        freq.im *= scaling_factor;
+    }
+
+    let ifft = planner.plan_fft_inverse(sample_count);
+    ifft.process(&mut spectrum);
+
+    let max_value = spectrum.iter()
+        .map(|c| (c.re.powi(2) + c.im.powi(2)).sqrt())
+        .fold(0.0, f64::max);
+
+    let output = spectrum.iter()
+        .map(|c| spec.amp * c.re / max_value)
+        .collect::<Vec<f64>>();
+
+    Ok(output)
 }
 
 pub fn generate_noise(spec: &SignalSpec, noise_type: &str) -> Result<Vec<f64>, Box<dyn Error>> {
-    match noise_type {
-        "white" => { generate_white_noise(spec) },
-        "pink" => { generate_pink_noise(spec) }
+    let mut samples = match noise_type {
+        "white" => { generate_white_noise(spec) }?,
+        "pink" => { generate_pink_noise(spec) }?,
         &_ => { return Err("unknown noise type".into()) }
-    }
+    };
+
+    do_apply_taper_both(&mut samples, &spec.taper_spec)?;
+    Ok(samples)
 }
 
 fn generate_linear_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Result<Vec<f64>, Box<dyn Error>> {
