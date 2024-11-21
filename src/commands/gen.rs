@@ -93,7 +93,8 @@ impl WaveFormCommands {
                 ("tsp".to_string(), freq_disable, freq_disable)
             }
             WaveFormCommands::Sweep(opt) => {
-                ("sweep".to_string(), opt.startf, opt.endf)
+                let filename_type = format!("{}_sweep", opt.type_of_sweep);
+                (filename_type, opt.startf, opt.endf)
             }
             WaveFormCommands::Pwm(opt) => {
                 let f_verified = super::processing::value_verify(opt.frequency, 0, fs / 2);
