@@ -205,19 +205,15 @@ fn generate_log_tsp(_spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
     return Err("generate log tsp is not supported, yet.".into());
 }
 
-pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: String) -> Result<Vec<f64>, Box<dyn Error>> {
-    let mut samples;
+pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: &str) -> Result<Vec<f64>, Box<dyn Error>> {
+    let mut output = match tsp_type {
+        "linear" => { generate_linear_tsp(&spec)? }
+        "log" => { generate_log_tsp(&spec)? }
+        _ => { return Err("unexpected type of tsp signal".into()); }
+    };
 
-    if tsp_type == "linear" {
-        samples = generate_linear_tsp(&spec)?;
-    } else if tsp_type == "log" {
-        samples = generate_log_tsp(&spec)?;
-    } else {
-        return Err("unexpected type of tsp signal".into());
-    }
-
-    do_apply_taper_end(&mut samples, &spec.taper_spec)?;
-    Ok(samples)
+    do_apply_taper_end(&mut output, &spec.taper_spec)?;
+    Ok(output)
 }
 
 fn generate_log_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f64>, Box<dyn Error>> {
