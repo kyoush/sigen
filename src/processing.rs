@@ -82,6 +82,9 @@ pub fn signal_generator(args: &mut commands::gen::GenOptions) -> Result<(), Box<
         WaveFormCommands::Tsp(tsp_options) => {
             samples = gen::generate_tsp_signal(&signal_spec, tsp_options.tsp_type.clone(), startf, endf)?;
         }
+        WaveFormCommands::Sweep(sweep_options) => {
+            samples = gen::generate_sweep_signal(&signal_spec, sweep_options.type_of_sweep.clone(), startf, endf)?;
+        }
         WaveFormCommands::Pwm(pwm_options) => {
             let d_verified = value_verify(pwm_options.percent_of_duty, 0, 100);
             samples = gen::generate_pwm_signal(&signal_spec, startf, d_verified)?;

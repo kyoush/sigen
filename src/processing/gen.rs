@@ -233,6 +233,12 @@ pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: String, lowfreq: i32, hi
     Ok(samples)
 }
 
+pub fn generate_sweep_signal(_spec: &SignalSpec, _sweep_type: String, _lowfreq: i32, _highfreq: i32) -> Result<Vec<f64>, Box<dyn Error>> {
+    let mut samples = vec![];
+
+    Ok(samples)
+}
+
 pub fn generate_pwm_signal(spec: &SignalSpec, freq: i32, duty: u32) -> Result<Vec<f64>, Box<dyn Error>> {
     let mut samples = vec![0.0; (spec.d * spec.fs as f64) as usize];
     let period_samples = spec.fs / freq;
