@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::f32::consts::PI;
-use rustfft::{ FftPlanner, num_complex::Complex };
+use rustfft::{ FftPlanner, num_complex::Complex, num_traits::Zero};
 use rtaper::{WindowType, TaperSpec};
 
 use crate::commands::common::TaperSpecOptions;
@@ -57,6 +57,19 @@ pub fn parse_duration(duration_cmd: &str) -> Result<f64, Box<dyn Error>> {
             else {
                 return Err(format!("cannot parse duration [{}]", duration_cmd).into())
             }
+        }
+    }
+}
+
+fn do_apply_taper_end(samples: &mut Vec<f64>, taper_spec: &Option<TaperSpec>,
+) -> Result<Vec<f64>, Box<dyn Error>> {
+    match taper_spec {
+        Some(spec) => {
+            rtaper::apply_taper_fade_out(samples, &spec)?;
+            Ok(samples.to_vec())
+        }
+        None => {
+            return Err("taper spec is not set".into());
         }
     }
 }
@@ -149,17 +162,43 @@ pub fn generate_noise(spec: &SignalSpec, noise_type: &str) -> Result<Vec<f64>, B
     Ok(samples)
 }
 
-fn generate_linear_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Result<Vec<f64>, Box<dyn Error>> {
-    let sample_count = (spec.d * spec.fs as f64) as usize;
-    let mut samples = Vec::with_capacity(sample_count);
+fn generate_linear_tsp(spec: &SignalSpec, _lowfreq: f64, _highfreq: f64,) -> Result<Vec<f64>, Box<dyn Error>> {
+    let n_samples = spec.d * spec.fs as f64;
+    let pow = (n_samples * 2.0).log2().ceil() as i32;
+    let n = 1 << pow;
+    let j = n / 2;
+    let mut up_tsp_complex: Vec<Complex<f64>> = vec![Complex::zero(); n];
+    let mut up_tsp_real: Vec<f64> = vec![0.0; n];
 
-    for n in 0..sample_count {
-        let t = n as f64 / spec.fs as f64;
-        let phase = 2.0 * PI as f64 * (lowfreq * t + ((highfreq - lowfreq) / (2.0 * spec.d as f64)) * t * t);
-        samples.push(spec.amp * phase.sin());
+    for k in 0..=j {
+        let angle = -2.0 * std::f64::consts::PI * (j as f64) * ((k as f64) / (n as f64)).powi(2);
+        up_tsp_complex[k] = Complex::new(angle.cos(), angle.sin());
     }
 
-    Ok(samples)
+    for k in (1..j).rev() {
+        up_tsp_complex[n - k] = up_tsp_complex[k].conj();
+    }
+
+    let mut planner = FftPlanner::new();
+    let fft = planner.plan_fft_inverse(n);
+    fft.process(&mut up_tsp_complex);
+
+    for (i, c) in up_tsp_complex.iter().enumerate() {
+        up_tsp_real[i] = c.re / (n as f64);
+    }
+
+    let max_value = up_tsp_real
+        .iter()
+        .map(|x| x.abs())
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+
+    let output = up_tsp_real[0..(n_samples as usize)]
+        .iter()
+        .map(|x| spec.amp * x / max_value)
+        .collect::<Vec<f64>>();
+
+    Ok(output)
 }
 
 fn generate_log_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Result<Vec<f64>, Box<dyn Error>> {
@@ -190,7 +229,7 @@ pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: String, lowfreq: i32, hi
         return Err("unexpected type of tsp signal".into());
     }
 
-    do_apply_taper_both(&mut samples, &spec.taper_spec)?;
+    do_apply_taper_end(&mut samples, &spec.taper_spec)?;
     Ok(samples)
 }
 
