@@ -82,11 +82,8 @@ impl WaveFormCommands {
                 let filename_type = format!("{}noise", noise_type);
                 (filename_type, freq_disable, freq_disable)
             }
-            WaveFormCommands::Tsp(opt) => {
-                let endf_verified = super::processing::value_verify(opt.endf, 0, fs / 2);
-                let startf_verified: i32 =
-                    super::processing::value_verify(opt.startf, 0, endf_verified);
-                ("tsp".to_string(), startf_verified, endf_verified)
+            WaveFormCommands::Tsp(_) => {
+                ("tsp".to_string(), freq_disable, freq_disable)
             }
             WaveFormCommands::Pwm(opt) => {
                 let f_verified = super::processing::value_verify(opt.frequency, 0, fs / 2);
@@ -153,20 +150,6 @@ pub struct TspOptions {
         value_parser = ["linear", "log"],
     )]
     pub tsp_type: String,
-
-    /// Starting frequency of the TSP signal in Hz
-    #[arg(
-        short, long,
-        default_value_t = super::LOW_FREQ_TSP_DEF,
-    )]
-    pub startf: i32,
-
-    /// Ending frequency of the TSP signal in Hz
-    #[arg(
-        short, long,
-        default_value_t = super::HIGH_FREQ_TSP_DEF,
-    )]
-    pub endf: i32,
 
     #[command(flatten)]
     pub options: common::CommonOptions,
