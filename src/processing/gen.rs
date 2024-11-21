@@ -162,7 +162,7 @@ pub fn generate_noise(spec: &SignalSpec, noise_type: &str) -> Result<Vec<f64>, B
     Ok(samples)
 }
 
-fn generate_linear_tsp(spec: &SignalSpec, _lowfreq: f64, _highfreq: f64,) -> Result<Vec<f64>, Box<dyn Error>> {
+fn generate_linear_tsp(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
     let n_samples = spec.d * spec.fs as f64;
     let pow = (n_samples * 2.0).log2().ceil() as i32;
     let n = 1 << pow;
@@ -222,7 +222,7 @@ pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: String, lowfreq: i32, hi
     let mut samples;
 
     if tsp_type == "linear" {
-        samples = generate_linear_tsp(&spec, lowfreq as f64, highfreq as f64)?;
+        samples = generate_linear_tsp(&spec)?;
     } else if tsp_type == "log" {
         samples = generate_log_tsp(&spec, lowfreq as f64, highfreq as f64)?;
     } else {
