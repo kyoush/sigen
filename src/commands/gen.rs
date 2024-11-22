@@ -20,6 +20,9 @@ pub enum WaveFormCommands {
     /// generate a wav file with a TSP [Time Stretched Pulse] waveform
     Tsp(TspOptions),
 
+    /// generate a wav file with a Swept-Sine
+    Sweep(SweepOptions),
+
     /// generate a wav file with a PWM (pulse train)
     Pwm(PwmOptions),
 
@@ -33,6 +36,7 @@ impl WaveFormCommands {
             WaveFormCommands::Sine(opt) => &opt.options,
             WaveFormCommands::Noise(opt) => &opt.options,
             WaveFormCommands::Tsp(opt) => &opt.options,
+            WaveFormCommands::Sweep(opt) => &opt.options,
             WaveFormCommands::Pwm(opt) => &opt.options,
             WaveFormCommands::Zeros(opt) => &opt.options,
         }
@@ -43,6 +47,7 @@ impl WaveFormCommands {
             WaveFormCommands::Sine(opt) => Some(&opt.taper_opt),
             WaveFormCommands::Noise(opt) => Some(&opt.taper_opt),
             WaveFormCommands::Tsp(opt) => Some(&opt.taper_opt),
+            WaveFormCommands::Sweep(opt) => Some(&opt.taper_opt),
             WaveFormCommands::Pwm(opt) => Some(&opt.taper_opt),
             WaveFormCommands::Zeros(_) => None,
         };
@@ -55,6 +60,7 @@ impl WaveFormCommands {
             WaveFormCommands::Sine(opt) => &opt.duration,
             WaveFormCommands::Noise(opt) => &opt.duration,
             WaveFormCommands::Tsp(opt) => &opt.duration,
+            WaveFormCommands::Sweep(opt) => &opt.duration,
             WaveFormCommands::Pwm(opt) => &opt.duration,
             WaveFormCommands::Zeros(opt) => &opt.duration,
         }
@@ -65,6 +71,7 @@ impl WaveFormCommands {
             WaveFormCommands::Sine(opt) => crate::processing::gen::parse_duration(&opt.duration),
             WaveFormCommands::Noise(opt) => crate::processing::gen::parse_duration(&opt.duration),
             WaveFormCommands::Tsp(opt) => crate::processing::gen::parse_duration(&opt.duration),
+            WaveFormCommands::Sweep(opt) => crate::processing::gen::parse_duration(&opt.duration),
             WaveFormCommands::Pwm(opt) => crate::processing::gen::parse_duration(&opt.duration),
             WaveFormCommands::Zeros(opt) => crate::processing::gen::parse_duration(&opt.duration),
         }
@@ -84,6 +91,10 @@ impl WaveFormCommands {
             }
             WaveFormCommands::Tsp(_) => {
                 ("tsp".to_string(), freq_disable, freq_disable)
+            }
+            WaveFormCommands::Sweep(opt) => {
+                let filename_type = format!("{}_sweep", opt.type_of_sweep);
+                (filename_type, opt.startf, opt.endf)
             }
             WaveFormCommands::Pwm(opt) => {
                 let f_verified = super::processing::value_verify(opt.frequency, 0, fs / 2);
@@ -161,6 +172,44 @@ pub struct TspOptions {
     #[arg(
         short, long,
         default_value_t = super::D_DEF_SHORT.to_string(),
+    )]
+    pub duration: String,
+}
+
+#[derive(Args, Debug , Clone)]
+pub struct SweepOptions {
+    /// type of Swept-Sine waveform
+    #[arg(
+        short, long,
+        default_value = "linear",
+        value_parser = ["linear", "log"],
+    )]
+    pub type_of_sweep: String,
+
+    /// Starting frequency of the Swept-Sine in Hz
+    #[arg(
+        short, long,
+        default_value_t = super::LOW_FREQ_TSP_DEF,
+    )]
+    pub startf: i32,
+
+    /// Ending frequency of the Swept-Sine in Hz
+    #[arg(
+        short, long,
+        default_value_t = super::HIGH_FREQ_TSP_DEF,
+    )]
+    pub endf : i32,
+
+    #[command(flatten)]
+    pub options: common::CommonOptions,
+
+    #[command(flatten)]
+    pub taper_opt: common::TaperSpecOptions,
+
+    /// duration of the signal in seconds.
+    #[arg(
+        short, long,
+        default_value_t = super::D_DEF_LONG.to_string(),
     )]
     pub duration: String,
 }

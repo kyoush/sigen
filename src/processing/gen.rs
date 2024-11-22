@@ -162,7 +162,7 @@ pub fn generate_noise(spec: &SignalSpec, noise_type: &str) -> Result<Vec<f64>, B
     Ok(samples)
 }
 
-fn generate_linear_tsp(spec: &SignalSpec, _lowfreq: f64, _highfreq: f64,) -> Result<Vec<f64>, Box<dyn Error>> {
+fn generate_linear_tsp(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
     let n_samples = spec.d * spec.fs as f64;
     let pow = (n_samples * 2.0).log2().ceil() as i32;
     let n = 1 << pow;
@@ -201,36 +201,64 @@ fn generate_linear_tsp(spec: &SignalSpec, _lowfreq: f64, _highfreq: f64,) -> Res
     Ok(output)
 }
 
-fn generate_log_tsp(spec: &SignalSpec, lowfreq: f64, highfreq: f64) -> Result<Vec<f64>, Box<dyn Error>> {
+fn generate_log_tsp(_spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
+    return Err("generate log tsp is not supported, yet.".into());
+}
+
+pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: &str) -> Result<Vec<f64>, Box<dyn Error>> {
+    let mut output = match tsp_type {
+        "linear" => { generate_linear_tsp(&spec)? }
+        "log" => { generate_log_tsp(&spec)? }
+        _ => { return Err("unexpected type of tsp signal".into()); }
+    };
+
+    do_apply_taper_end(&mut output, &spec.taper_spec)?;
+    Ok(output)
+}
+
+fn generate_log_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f64>, Box<dyn Error>> {
+    let sample_count  = (spec.d * spec.fs as f64) as usize;
+    let mut samples = Vec::with_capacity(sample_count);
+
+    let ln_ratio = (e / s).ln();
+    let k = ln_ratio / spec.d;
+
+    for n in 0..sample_count {
+        let t = n as f64 / spec.fs as f64;
+        let phase = 2.0 * std::f64::consts::PI * s * ((k * t).exp() - 1.0) / k;
+        samples.push(spec.amp * phase.sin());
+    }
+
+    Ok(samples)
+}
+
+fn generate_linear_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f64>, Box<dyn Error>> {
     let sample_count = (spec.d * spec.fs as f64) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
     for n in 0..sample_count {
         let t = n as f64 / spec.fs as f64;
-        let freq = lowfreq * ((highfreq / lowfreq).powf(t / spec.d));
-        let phase = 2.0 * PI as f64 * freq * t;
-        samples.push(spec.amp * phase.sin());
+        let phase = 2.0 * std::f64::consts::PI * (s * t + ((e - s) / (2.0 * spec.d as f64)) * t * t);
+        samples.push(spec.amp * phase.sin())
     }
 
-    let cutoff_index = (sample_count as f32 * 0.75) as usize;
-    let signal = &samples[0..cutoff_index];
-
-    Ok(signal.to_vec())
+    Ok(samples)
 }
 
-pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: String, lowfreq: i32, highfreq: i32) -> Result<Vec<f64>, Box<dyn Error>> {
-    let mut samples;
+pub fn generate_sweep_signal(
+    spec: &SignalSpec,
+    sweep_type: &str,
+    s: i32,
+    e: i32,
+) -> Result<Vec<f64>, Box<dyn Error>> {
+    let mut output = match sweep_type {
+        "linear" => { generate_linear_sweep_signal(spec, s as f64, e as f64)? }
+        "log" => { generate_log_sweep_signal(spec, s as f64, e as f64)? }
+        _=> { return Err("Unknown swept type".into()) }
+    };
 
-    if tsp_type == "linear" {
-        samples = generate_linear_tsp(&spec, lowfreq as f64, highfreq as f64)?;
-    } else if tsp_type == "log" {
-        samples = generate_log_tsp(&spec, lowfreq as f64, highfreq as f64)?;
-    } else {
-        return Err("unexpected type of tsp signal".into());
-    }
-
-    do_apply_taper_end(&mut samples, &spec.taper_spec)?;
-    Ok(samples)
+    do_apply_taper_end(&mut output, &spec.taper_spec)?;
+    Ok(output)
 }
 
 pub fn generate_pwm_signal(spec: &SignalSpec, freq: i32, duty: u32) -> Result<Vec<f64>, Box<dyn Error>> {
