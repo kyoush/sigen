@@ -3,6 +3,8 @@ use super::processing;
 use clap::{Args, Subcommand};
 use rtaper::TaperSpec;
 
+const FREQ_DISABLE: i32 = -1;
+
 #[derive(Args, Debug, Clone)]
 pub struct GenOptions {
     #[command(subcommand)]
@@ -46,7 +48,7 @@ impl WaveFormCommands {
         let opt = match self {
             WaveFormCommands::Sine(opt) => Some(&opt.taper_opt),
             WaveFormCommands::Noise(opt) => Some(&opt.taper_opt),
-            WaveFormCommands::Tsp(opt) => Some(&opt.taper_opt),
+            WaveFormCommands::Tsp(_) => None,
             WaveFormCommands::Sweep(opt) => Some(&opt.taper_opt),
             WaveFormCommands::Pwm(opt) => Some(&opt.taper_opt),
             WaveFormCommands::Zeros(_) => None,
@@ -78,27 +80,29 @@ impl WaveFormCommands {
     }
 
     pub fn get_fileinfo(&self, fs: i32) -> (String, i32, i32) {
-        let freq_disable = -1;
         match self {
             WaveFormCommands::Sine(opt) => {
-                let f_verified = super::processing::value_verify(opt.frequency, 0, fs / 2);
-                ("sine".to_string(), f_verified, freq_disable)
+                let f = crate::processing::gen::parse_freq(&opt.frequency).unwrap();
+                let f_verified = super::processing::value_verify(f, 0, fs / 2);
+                ("sine".to_string(), f_verified, FREQ_DISABLE)
             }
             WaveFormCommands::Noise(opt) => {
                 let noise_type = &opt.noise_type;
                 let filename_type = format!("{}noise", noise_type);
-                (filename_type, freq_disable, freq_disable)
+                (filename_type, FREQ_DISABLE, FREQ_DISABLE)
             }
             WaveFormCommands::Tsp(_) => {
-                ("tsp".to_string(), freq_disable, freq_disable)
+                ("tsp".to_string(), FREQ_DISABLE, FREQ_DISABLE)
             }
             WaveFormCommands::Sweep(opt) => {
-                let filename_type = format!("{}_sweep", opt.type_of_sweep);
-                (filename_type, opt.startf, opt.endf)
+                let filename_type: String = format!("{}_sweep", opt.type_of_sweep);
+                let s = crate::processing::gen::parse_freq(&opt.startf).unwrap();
+                let e = crate::processing::gen::parse_freq(&opt.endf).unwrap();
+                (filename_type, s, e)
             }
             WaveFormCommands::Pwm(opt) => {
                 let f_verified = super::processing::value_verify(opt.frequency, 0, fs / 2);
-                ("pwm".to_string(), f_verified, freq_disable)
+                ("pwm".to_string(), f_verified, FREQ_DISABLE)
             }
             WaveFormCommands::Zeros(_) => { ("zeros".to_string(), -1, -1) }
         }
@@ -110,9 +114,9 @@ pub struct SineOptions {
     /// Frequency of the sine wave in Hz
     #[arg(
         short, long,
-        default_value_t = super::FREQ_DEF,
+        default_value_t = super::FREQ_DEF.to_string(),
     )]
-    pub frequency: i32,
+    pub frequency: String,
 
     #[command(flatten)]
     pub options: common::CommonOptions,
@@ -165,9 +169,6 @@ pub struct TspOptions {
     #[command(flatten)]
     pub options: common::CommonOptions,
 
-    #[command(flatten)]
-    pub taper_opt: common::TaperSpecOptions,
-
     /// duration of the signal in seconds.
     #[arg(
         short, long,
@@ -189,16 +190,16 @@ pub struct SweepOptions {
     /// Starting frequency of the Swept-Sine in Hz
     #[arg(
         short, long,
-        default_value_t = super::LOW_FREQ_TSP_DEF,
+        default_value_t = super::LOW_FREQ_TSP_DEF.to_string(),
     )]
-    pub startf: i32,
+    pub startf: String,
 
     /// Ending frequency of the Swept-Sine in Hz
     #[arg(
         short, long,
-        default_value_t = super::HIGH_FREQ_TSP_DEF,
+        default_value_t = super::HIGH_FREQ_TSP_DEF.to_string(),
     )]
-    pub endf : i32,
+    pub endf : String,
 
     #[command(flatten)]
     pub options: common::CommonOptions,

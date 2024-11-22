@@ -21,7 +21,7 @@ pub fn get_taper_spec(opt: Option<&TaperSpecOptions>) -> Option<TaperSpec> {
                 "hann" => { WindowType::Hann }
                 "cos" => { WindowType::Cosine }
                 "blackman" => { WindowType::Blackman }
-                _ => { WindowType::Hann }
+                _ => { WindowType::Linear }
             };
         
             Some(TaperSpec {
@@ -39,6 +39,18 @@ fn trim_end_to_i32(cmd: &str, pattern: &str) -> Result<f64, String> {
         trim.parse::<f64>().map_err(|e| e.to_string())
     }else {
         Err("partern not found end".to_string())
+    }
+}
+
+pub fn parse_freq(freq_cmd: &str) -> Result<i32, Box<dyn Error>> {
+    match freq_cmd.parse::<i32>() {
+        Ok(val) => { Ok (val) }
+        Err(_) => {
+            if let Ok(val) = trim_end_to_i32(freq_cmd, "k") { Ok(val as i32 * 1000) }
+            else {
+                return Err(format!("cannot parse frequency [{}]", freq_cmd).into())
+            }
+        }
     }
 }
 
@@ -206,13 +218,12 @@ fn generate_log_tsp(_spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
 }
 
 pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: &str) -> Result<Vec<f64>, Box<dyn Error>> {
-    let mut output = match tsp_type {
+    let output = match tsp_type {
         "linear" => { generate_linear_tsp(&spec)? }
         "log" => { generate_log_tsp(&spec)? }
         _ => { return Err("unexpected type of tsp signal".into()); }
     };
 
-    do_apply_taper_end(&mut output, &spec.taper_spec)?;
     Ok(output)
 }
 
