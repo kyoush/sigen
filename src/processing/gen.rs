@@ -218,13 +218,12 @@ fn generate_log_tsp(_spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
 }
 
 pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: &str) -> Result<Vec<f64>, Box<dyn Error>> {
-    let mut output = match tsp_type {
+    let output = match tsp_type {
         "linear" => { generate_linear_tsp(&spec)? }
         "log" => { generate_log_tsp(&spec)? }
         _ => { return Err("unexpected type of tsp signal".into()); }
     };
 
-    do_apply_taper_end(&mut output, &spec.taper_spec)?;
     Ok(output)
 }
 

@@ -48,7 +48,7 @@ impl WaveFormCommands {
         let opt = match self {
             WaveFormCommands::Sine(opt) => Some(&opt.taper_opt),
             WaveFormCommands::Noise(opt) => Some(&opt.taper_opt),
-            WaveFormCommands::Tsp(opt) => Some(&opt.taper_opt),
+            WaveFormCommands::Tsp(_) => None,
             WaveFormCommands::Sweep(opt) => Some(&opt.taper_opt),
             WaveFormCommands::Pwm(opt) => Some(&opt.taper_opt),
             WaveFormCommands::Zeros(_) => None,
@@ -168,9 +168,6 @@ pub struct TspOptions {
 
     #[command(flatten)]
     pub options: common::CommonOptions,
-
-    #[command(flatten)]
-    pub taper_opt: common::TaperSpecOptions,
 
     /// duration of the signal in seconds.
     #[arg(
