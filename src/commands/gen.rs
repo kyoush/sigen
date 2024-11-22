@@ -81,7 +81,8 @@ impl WaveFormCommands {
         let freq_disable = -1;
         match self {
             WaveFormCommands::Sine(opt) => {
-                let f_verified = super::processing::value_verify(opt.frequency, 0, fs / 2);
+                let f = crate::processing::gen::parse_freq(&opt.frequency).unwrap();
+                let f_verified = super::processing::value_verify(f, 0, fs / 2);
                 ("sine".to_string(), f_verified, freq_disable)
             }
             WaveFormCommands::Noise(opt) => {
@@ -93,8 +94,10 @@ impl WaveFormCommands {
                 ("tsp".to_string(), freq_disable, freq_disable)
             }
             WaveFormCommands::Sweep(opt) => {
-                let filename_type = format!("{}_sweep", opt.type_of_sweep);
-                (filename_type, opt.startf, opt.endf)
+                let filename_type: String = format!("{}_sweep", opt.type_of_sweep);
+                let s = crate::processing::gen::parse_freq(&opt.startf).unwrap();
+                let e = crate::processing::gen::parse_freq(&opt.endf).unwrap();
+                (filename_type, s, e)
             }
             WaveFormCommands::Pwm(opt) => {
                 let f_verified = super::processing::value_verify(opt.frequency, 0, fs / 2);
@@ -110,9 +113,9 @@ pub struct SineOptions {
     /// Frequency of the sine wave in Hz
     #[arg(
         short, long,
-        default_value_t = super::FREQ_DEF,
+        default_value_t = super::FREQ_DEF.to_string(),
     )]
-    pub frequency: i32,
+    pub frequency: String,
 
     #[command(flatten)]
     pub options: common::CommonOptions,
@@ -189,16 +192,16 @@ pub struct SweepOptions {
     /// Starting frequency of the Swept-Sine in Hz
     #[arg(
         short, long,
-        default_value_t = super::LOW_FREQ_TSP_DEF,
+        default_value_t = super::LOW_FREQ_TSP_DEF.to_string(),
     )]
-    pub startf: i32,
+    pub startf: String,
 
     /// Ending frequency of the Swept-Sine in Hz
     #[arg(
         short, long,
-        default_value_t = super::HIGH_FREQ_TSP_DEF,
+        default_value_t = super::HIGH_FREQ_TSP_DEF.to_string(),
     )]
-    pub endf : i32,
+    pub endf : String,
 
     #[command(flatten)]
     pub options: common::CommonOptions,

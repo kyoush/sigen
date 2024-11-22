@@ -42,6 +42,18 @@ fn trim_end_to_i32(cmd: &str, pattern: &str) -> Result<f64, String> {
     }
 }
 
+pub fn parse_freq(freq_cmd: &str) -> Result<i32, Box<dyn Error>> {
+    match freq_cmd.parse::<i32>() {
+        Ok(val) => { Ok (val) }
+        Err(_) => {
+            if let Ok(val) = trim_end_to_i32(freq_cmd, "k") { Ok(val as i32 * 1000) }
+            else {
+                return Err(format!("cannot parse frequency [{}]", freq_cmd).into())
+            }
+        }
+    }
+}
+
 pub fn parse_duration(duration_cmd: &str) -> Result<f64, Box<dyn Error>> {
     match duration_cmd.parse::<f64>() {
         Ok(val) => { Ok(val) }
