@@ -21,7 +21,7 @@ pub fn get_taper_spec(opt: Option<&TaperSpecOptions>) -> Option<TaperSpec> {
                 "hann" => { WindowType::Hann }
                 "cos" => { WindowType::Cosine }
                 "blackman" => { WindowType::Blackman }
-                _ => { WindowType::Hann }
+                _ => { WindowType::Linear }
             };
         
             Some(TaperSpec {
