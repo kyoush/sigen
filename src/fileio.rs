@@ -95,21 +95,22 @@ fn freq_format(freq: i32, prefix: &str) -> String {
 }
 
 fn duration_format(d_cmd: &str) -> String {
-    match d_cmd.parse::<i32>() {
-        Ok(val) => {
-            if val >= 60 {
-                if val % 60 == 0 {
-                    format!("_{}min", val / 60)
-                } else {	
-                    format!("_{}min{}s", val / 60, val % 60)
-                }
-            } else {
-                format!("_{}s", val)
+    if let Ok(val) = d_cmd.parse::<i32>() {
+        if val >= 60 {
+            if val % 60 == 0 {
+                return format!("_{}min", val / 60);
+            } else {	
+                return format!("_{}min{}s", val / 60, val % 60);
             }
+        } else {
+            return format!("_{}s", val);
         }
-        Err(_) => {
-            format!("_{}", d_cmd)
-        }
+    }else if let Ok(val) = d_cmd.parse::<f64>() {
+        let msec = (val * 1000.0).floor() as i32;
+
+        return format!("_{}msec", msec);
+    }else {
+        return format!("_{}", d_cmd);
     }
 }
 
