@@ -80,7 +80,7 @@ pub fn signal_generator(args: commands::gen::GenOptions) -> Result<(), Box<dyn E
             samples = gen::generate_noise(&signal_spec, &noise_options.noise_type)?;
         }
         WaveFormCommands::Tsp(tsp_options) => {
-            samples = gen::generate_tsp_signal(&signal_spec, &tsp_options.tsp_type)?;
+            samples = gen::generate_tsp_signal(&signal_spec, &tsp_options.tsp_type, tsp_options.flip)?;
         }
         WaveFormCommands::Sweep(sweep_options) => {
             samples = gen::generate_sweep_signal(&signal_spec, &sweep_options.type_of_sweep, startf, endf)?;

@@ -91,8 +91,10 @@ impl WaveFormCommands {
                 let filename_type = format!("{}noise", noise_type);
                 (filename_type, FREQ_DISABLE, FREQ_DISABLE)
             }
-            WaveFormCommands::Tsp(_) => {
-                ("tsp".to_string(), FREQ_DISABLE, FREQ_DISABLE)
+            WaveFormCommands::Tsp(opt) => {
+                let direction = if opt.flip { "up" } else { "down" };
+                let filename_type: String = format!("{}_{}TSP", opt.tsp_type, direction);
+                (filename_type, FREQ_DISABLE, FREQ_DISABLE)
             }
             WaveFormCommands::Sweep(opt) => {
                 let filename_type: String = format!("{}_sweep", opt.type_of_sweep);
@@ -161,7 +163,7 @@ pub struct TspOptions {
     /// type of TSP signal waveform
     #[arg(
         short, long,
-        default_value = "linear",
+        default_value = "log",
         value_parser = ["linear", "log"],
     )]
     pub tsp_type: String,
@@ -175,6 +177,10 @@ pub struct TspOptions {
         default_value_t = super::D_DEF_SHORT.to_string(),
     )]
     pub duration: String,
+
+    /// convert to down TSP by flipping the time axis
+    #[arg(short, long)]
+    pub flip: bool,
 }
 
 #[derive(Args, Debug , Clone)]

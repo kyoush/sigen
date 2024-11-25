@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{collections::VecDeque, error::Error};
 use std::f64::consts::PI;
 use rustfft::{ FftPlanner, num_complex::Complex, num_traits::Zero};
 use rtaper::{WindowType, TaperSpec};
@@ -174,22 +174,60 @@ pub fn generate_noise(spec: &SignalSpec, noise_type: &str) -> Result<Vec<f64>, B
     Ok(samples)
 }
 
-fn generate_linear_tsp(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
-    let n_samples = spec.d * spec.fs as f64;
-    let pow = (n_samples * 2.0).log2().ceil() as i32;
-    let n = 1 << pow;
+fn design_linear_tsp_spectrum(n: usize, flip_sw: f64) -> Vec<Complex<f64>> {
     let j = n / 2;
     let mut up_tsp_complex: Vec<Complex<f64>> = vec![Complex::zero(); n];
-    let mut up_tsp_real: Vec<f64> = vec![0.0; n];
 
     for k in 0..=j {
-        let angle = -2.0 * std::f64::consts::PI * (j as f64) * ((k as f64) / (n as f64)).powi(2);
-        up_tsp_complex[k] = Complex::new(angle.cos(), angle.sin());
+        let freq_ratio = ((k as f64) / (n as f64)).powi(2);
+        let angle = flip_sw * 2.0 * PI * (j as f64) * freq_ratio;
+        let complex_angle = Complex::new(0.0, angle);
+
+        up_tsp_complex[k] = complex_angle.exp();
     }
 
     for k in (1..j).rev() {
         up_tsp_complex[n - k] = up_tsp_complex[k].conj();
     }
+
+    up_tsp_complex
+}
+
+// @ref https://www.kanedayyy.jp/asp/ASP/IRseminor2016.pdf
+fn design_log_tsp_spectrum(n: usize, flip_sw: f64) -> Vec<Complex<f64>> {
+    let j = n / 2;
+    let mut up_tsp_complex: Vec<Complex<f64>> = vec![Complex::zero(); n];
+
+    up_tsp_complex[0] = Complex::new(1.0, 0.0);
+
+    let a = (j as f64 * PI) / ((n as f64 / 2.0) * (n as f64 / 2.0).ln());
+
+    for k in 1..=j {
+        let angle = flip_sw * a * k as f64 * (k as f64).ln();
+        let complex_angle = Complex::new(0.0, angle);
+
+        up_tsp_complex[k] = (1.0 / (k as f64).sqrt()) * complex_angle.exp();
+    }
+
+    for k in (1..j).rev() {
+        up_tsp_complex[n - k] = up_tsp_complex[k].conj();
+    }
+
+    up_tsp_complex
+}
+
+fn exec_generate_tsp(
+    spec: &SignalSpec,
+    design_tsp_spect: fn(usize, f64) -> Vec<Complex<f64>>,
+    enable_flip: bool,
+) -> Result<Vec<f64>, Box<dyn Error>> {
+    let n_samples = spec.d * spec.fs as f64;
+    let pow = (n_samples * 2.0).log2().ceil() as i32;
+    let n = 1 << pow;
+    let flip_sw = if enable_flip { 1.0 } else { -1.0 };
+
+    let mut up_tsp_real: Vec<f64> = vec![0.0; n];
+    let mut up_tsp_complex = design_tsp_spect(n, flip_sw);
 
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_inverse(n);
@@ -205,22 +243,26 @@ fn generate_linear_tsp(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
         .max_by(|a, b| a.partial_cmp(b).unwrap())
         .unwrap();
 
-    let output = up_tsp_real[0..(n_samples as usize)]
-        .iter()
+    let output = up_tsp_real.iter()
         .map(|x| spec.amp * x / max_value)
         .collect::<Vec<f64>>();
 
-    Ok(output)
+    let shift = ((3.0 / 4.0) * n as f64).floor() as usize;
+    let mut deque :VecDeque<f64> = VecDeque::from(output);
+    if enable_flip {
+        deque.rotate_right(shift);
+    }else {
+        deque.rotate_left(shift);
+    }
+
+
+    Ok(deque.into())
 }
 
-fn generate_log_tsp(_spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
-    return Err("generate log tsp is not supported, yet.".into());
-}
-
-pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: &str) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: &str, enable_flip: bool) -> Result<Vec<f64>, Box<dyn Error>> {
     let output = match tsp_type {
-        "linear" => { generate_linear_tsp(&spec)? }
-        "log" => { generate_log_tsp(&spec)? }
+        "linear" => { exec_generate_tsp(&spec, design_linear_tsp_spectrum, enable_flip)? }
+        "log" => { exec_generate_tsp(&spec, design_log_tsp_spectrum, enable_flip)? }
         _ => { return Err("unexpected type of tsp signal".into()); }
     };
 
