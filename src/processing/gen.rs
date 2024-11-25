@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::f32::consts::PI;
+use std::f64::consts::PI;
 use rustfft::{ FftPlanner, num_complex::Complex, num_traits::Zero};
 use rtaper::{WindowType, TaperSpec};
 
@@ -103,7 +103,7 @@ pub fn generate_sine_wave(spec: &SignalSpec, frequency: i32) -> Result<Vec<f64>,
     let mut samples = Vec::with_capacity(sample_count);
     for i in 0..sample_count {
         let t = i as f32 / spec.fs as f32;
-        let sample = spec.amp * (2.0 * PI * frequency as f32 * t).sin() as f64;
+        let sample = spec.amp * (2.0 * std::f32::consts::PI * frequency as f32 * t).sin() as f64;
         samples.push(sample);
     }
 
@@ -236,7 +236,7 @@ fn generate_log_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f6
 
     for n in 0..sample_count {
         let t = n as f64 / spec.fs as f64;
-        let phase = 2.0 * std::f64::consts::PI * s * ((k * t).exp() - 1.0) / k;
+        let phase = 2.0 * PI * s * ((k * t).exp() - 1.0) / k;
         samples.push(spec.amp * phase.sin());
     }
 
@@ -249,7 +249,7 @@ fn generate_linear_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec
 
     for n in 0..sample_count {
         let t = n as f64 / spec.fs as f64;
-        let phase = 2.0 * std::f64::consts::PI * (s * t + ((e - s) / (2.0 * spec.d as f64)) * t * t);
+        let phase = 2.0 * PI * (s * t + ((e - s) / (2.0 * spec.d as f64)) * t * t);
         samples.push(spec.amp * phase.sin())
     }
 
