@@ -98,12 +98,12 @@ fn do_apply_taper_both(samples: &mut Vec<f64>, taper_spec: &Option<TaperSpec>) -
     }
 }
 
-pub fn generate_sine_wave(spec: &SignalSpec, frequency: i32) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn generate_sine_wave(spec: &SignalSpec, freq: f64) -> Result<Vec<f64>, Box<dyn Error>> {
     let sample_count = (spec.d * spec.fs as f64) as usize;
     let mut samples = Vec::with_capacity(sample_count);
     for i in 0..sample_count {
-        let t = i as f32 / spec.fs as f32;
-        let sample = spec.amp * (2.0 * std::f32::consts::PI * frequency as f32 * t).sin() as f64;
+        let t = i as f64/ spec.fs as f64;
+        let sample = spec.amp * (2.0 * PI * freq * t).sin();
         samples.push(sample);
     }
 

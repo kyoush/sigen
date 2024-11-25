@@ -74,7 +74,7 @@ pub fn signal_generator(args: commands::gen::GenOptions) -> Result<(), Box<dyn E
     let samples;
     match &args.waveform {
         WaveFormCommands::Sine(_) => {
-            samples = gen::generate_sine_wave(&signal_spec, startf)?;
+            samples = gen::generate_sine_wave(&signal_spec, startf as f64)?;
         }
         WaveFormCommands::Noise(noise_options) => {
             samples = gen::generate_noise(&signal_spec, &noise_options.noise_type)?;
