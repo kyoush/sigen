@@ -74,13 +74,13 @@ pub fn signal_generator(args: commands::gen::GenOptions) -> Result<(), Box<dyn E
     let samples;
     match &args.waveform {
         WaveFormCommands::Sine(_) => {
-            samples = gen::generate_sine_wave(&signal_spec, startf)?;
+            samples = gen::generate_sine_wave(&signal_spec, startf as f64)?;
         }
         WaveFormCommands::Noise(noise_options) => {
             samples = gen::generate_noise(&signal_spec, &noise_options.noise_type)?;
         }
         WaveFormCommands::Tsp(tsp_options) => {
-            samples = gen::generate_tsp_signal(&signal_spec, &tsp_options.tsp_type)?;
+            samples = gen::generate_tsp_signal(&signal_spec, &tsp_options.tsp_type, tsp_options.flip)?;
         }
         WaveFormCommands::Sweep(sweep_options) => {
             samples = gen::generate_sweep_signal(&signal_spec, &sweep_options.type_of_sweep, startf, endf)?;
