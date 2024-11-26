@@ -6,6 +6,7 @@ pub mod common;
 pub mod taper;
 pub mod wav;
 pub mod modurate;
+pub mod conv;
 
 // default parameters
 pub const AMP_MIN: f64 = 0.0;
@@ -42,4 +43,7 @@ pub enum Commands {
 
     /// modurate a WAV file.
     Mod(modurate::ModOptions),
+
+    /// convolution WAV files.
+    Conv(conv::ConvOptions),
 }
