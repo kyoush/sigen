@@ -29,7 +29,7 @@ where
 
 pub fn apply_taper_to_wav(options: &commands::taper::TaperOptions) -> Result<(), Box<dyn Error>> {
     let taper_spec = gen::get_taper_spec(Some(&options.taper_opt)).unwrap();
-    let (mut samples, spec) = fileio::wavread::read_wav_file(options.input.as_str())?;
+    let (mut samples, spec) = fileio::read_wav_file(options.input.as_str())?;
     let num_ch = samples.len();
 
     for i in 0..num_ch {
@@ -37,7 +37,7 @@ pub fn apply_taper_to_wav(options: &commands::taper::TaperOptions) -> Result<(),
     }
 
     let fileinfo = crate::fileio::set_output_filename(options.output.clone(), options.input.as_str())?;
-    fileio::wavwrite::write_wav_file(spec, fileinfo.name.as_str(), &samples, true, true)?;
+    fileio::write_wav_file(spec, fileinfo.name.as_str(), &samples, true, true)?;
 
     println!("WAV file [{}] created successfully {}", fileinfo.name, fileinfo.exists_msg);
 
@@ -104,7 +104,7 @@ pub fn signal_generator(args: commands::gen::GenOptions) -> Result<(), Box<dyn E
 
     let samples_to_write = [samples.clone(), samples];
 
-    fileio::wavwrite::write_wav_file(wav_spec, &fileinfo.name, &samples_to_write, enable_l, enable_r)?;
+    fileio::write_wav_file(wav_spec, &fileinfo.name, &samples_to_write, enable_l, enable_r)?;
 
     println!("WAV file [{}] created successfully {}", fileinfo.name, fileinfo.exists_msg);
 
@@ -122,7 +122,7 @@ pub fn cat_wav_files(options: &commands::wav::WavOptions) -> Result<(), Box<dyn 
         override_msg = "(file override)".to_string();
     }
 
-    fileio::wavwrite::write_wav_file(spec, output_filename.as_str(), &samples, true, true)?;
+    fileio::write_wav_file(spec, output_filename.as_str(), &samples, true, true)?;
 
     println!("WAV file [{}] created successfully {}", output_filename, override_msg);
 

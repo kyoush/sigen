@@ -50,7 +50,7 @@ fn concatenate_no_interval(
     let mut spec:  Option<WavSpec> = None;
 
     for(_, filename) in input_files {
-        let (read_buf, tmp_spec) = fileio::wavread::read_wav_file(filename.as_str())?;
+        let (read_buf, tmp_spec) = fileio::read_wav_file(filename.as_str())?;
 
         if spec.is_none() {
             spec = Some(tmp_spec);
@@ -113,7 +113,7 @@ fn do_cat_commands(
         };
 
         if filename.is_some() {
-            let (read_buf, tmp_spec) = fileio::wavread::read_wav_file(filename.unwrap().as_str())?;
+            let (read_buf, tmp_spec) = fileio::read_wav_file(filename.unwrap().as_str())?;
 
             if spec.is_none() {
                 spec = Some(tmp_spec);
@@ -129,7 +129,7 @@ fn do_cat_commands(
         if duration.is_some() {
             if spec.is_none() {
                 let (_, tmp_filename) = filemap.get_index(0).unwrap();
-                let (_, tmp_spec) = fileio::wavread::read_wav_file(tmp_filename)?;
+                let (_, tmp_spec) = fileio::read_wav_file(tmp_filename)?;
                 spec = Some(tmp_spec);
             }
 
@@ -146,7 +146,7 @@ fn do_cat_commands(
 
     while i < filemap.len() && !flag {
         let (_, f) = filemap.get_index(i).unwrap();
-        let (read_buf, tmp_spec) = fileio::wavread::read_wav_file(f)?;
+        let (read_buf, tmp_spec) = fileio::read_wav_file(f)?;
 
         if spec.is_none() {
             spec = Some(tmp_spec);
