@@ -17,7 +17,7 @@ pub const LOW_FREQ_TSP_DEF: i32 = 20; // Hz
 pub const HIGH_FREQ_TSP_DEF: i32 = 16_000; // Hz
 pub const PWM_FREQ_DEF: i32 = 200; // Hz
 pub const PWM_DUTY_DEF: u32 = 10; // %
-pub const FS_DEF: i32 = 44_100; // Hz
+pub const FS_DEF: f64 = 44_100.0; // Hz
 pub const LEN_TAPER_DEF: usize = 4096; //points
 
 /// A tool for generating WAV files of various signal types.

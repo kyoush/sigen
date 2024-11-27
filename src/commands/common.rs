@@ -24,7 +24,7 @@ pub struct CommonOptions {
         short, long,
         default_value_t = super::FS_DEF,
     )]
-    pub rate_of_sample: i32,
+    pub rate_of_sample: f64,
 
     /// Output Filename
     #[arg(

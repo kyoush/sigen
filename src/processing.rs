@@ -64,8 +64,8 @@ pub fn signal_generator(args: commands::gen::GenOptions) -> Result<(), Box<dyn E
     let fileinfo = fileio::gen_file_name(
         &common_options.output_filename,
         sig_type,
-        startf,
-        endf,
+        startf as i32,
+        endf as i32,
         filename_ch,
         &args.waveform.get_duration_cmd(),
     )?;
@@ -74,7 +74,7 @@ pub fn signal_generator(args: commands::gen::GenOptions) -> Result<(), Box<dyn E
     let samples;
     match &args.waveform {
         WaveFormCommands::Sine(_) => {
-            samples = gen::generate_sine_wave(&signal_spec, startf as f64)?;
+            samples = gen::generate_sine_wave(&signal_spec, startf)?;
         }
         WaveFormCommands::Noise(noise_options) => {
             samples = gen::generate_noise(&signal_spec, &noise_options.noise_type)?;
@@ -86,7 +86,7 @@ pub fn signal_generator(args: commands::gen::GenOptions) -> Result<(), Box<dyn E
             samples = gen::generate_sweep_signal(&signal_spec, &sweep_options.type_of_sweep, startf, endf)?;
         }
         WaveFormCommands::Pwm(pwm_options) => {
-            let d_verified = value_verify(pwm_options.percent_of_duty, 0, 100);
+            let d_verified = value_verify(pwm_options.percent_of_duty, 0, 100) as f64;
             samples = gen::generate_pwm_signal(&signal_spec, startf, d_verified)?;
         }
         WaveFormCommands::Zeros(_) => {

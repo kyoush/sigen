@@ -3,7 +3,7 @@ use super::processing;
 use clap::{Args, Subcommand};
 use rtaper::TaperSpec;
 
-const FREQ_DISABLE: i32 = -1;
+const FREQ_DISABLE: f64 = -1.0;
 
 #[derive(Args, Debug, Clone)]
 pub struct GenOptions {
@@ -79,11 +79,11 @@ impl WaveFormCommands {
         }
     }
 
-    pub fn get_fileinfo(&self, fs: i32) -> (String, i32, i32) {
+    pub fn get_fileinfo(&self, fs: f64) -> (String, f64, f64) {
         match self {
             WaveFormCommands::Sine(opt) => {
                 let f = crate::processing::gen::parse_freq(&opt.frequency).unwrap();
-                let f_verified = super::processing::value_verify(f, 0, fs / 2);
+                let f_verified = super::processing::value_verify(f, 0.0, fs / 2.0);
                 ("sine".to_string(), f_verified, FREQ_DISABLE)
             }
             WaveFormCommands::Noise(opt) => {
@@ -103,10 +103,10 @@ impl WaveFormCommands {
                 (filename_type, s, e)
             }
             WaveFormCommands::Pwm(opt) => {
-                let f_verified = super::processing::value_verify(opt.frequency, 0, fs / 2);
+                let f_verified = super::processing::value_verify(opt.frequency as f64, 0.0, fs / 2.0);
                 ("pwm".to_string(), f_verified, FREQ_DISABLE)
             }
-            WaveFormCommands::Zeros(_) => { ("zeros".to_string(), -1, -1) }
+            WaveFormCommands::Zeros(_) => { ("zeros".to_string(), FREQ_DISABLE, FREQ_DISABLE) }
         }
     }
 }
