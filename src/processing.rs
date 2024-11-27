@@ -128,3 +128,7 @@ pub fn cat_wav_files(options: &commands::wav::WavOptions) -> Result<(), Box<dyn 
 
     Ok(())
 }
+
+pub fn wav_modurate(_options: &commands::modurate::ModOptions) -> Result<(), Box<dyn Error>> {
+    Ok(())
+}

@@ -5,6 +5,7 @@ pub mod gen;
 pub mod common;
 pub mod taper;
 pub mod wav;
+pub mod modurate;
 
 // default parameters
 pub const AMP_MIN: f64 = 0.0;
@@ -38,4 +39,7 @@ pub enum Commands {
 
     /// concatenates multiple WAV files into a single file
     Wav(wav::WavOptions),
+
+    /// modurate a WAV file.
+    Mod(modurate::ModOptions),
 }
