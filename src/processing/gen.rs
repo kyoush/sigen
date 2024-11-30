@@ -220,10 +220,11 @@ fn exec_generate_tsp(
     spec: &SignalSpec,
     design_tsp_spect: fn(usize, f64) -> Vec<Complex<f64>>,
     enable_flip: bool,
-) -> Result<Vec<f64>, Box<dyn Error>> {
+) -> Result<(Vec<f64>, f64, usize), Box<dyn Error>> {
     let n_samples = spec.d * spec.fs;
-    let pow = (n_samples * 2.0).log2().ceil() as i32;
+    let pow = (n_samples).log2().ceil() as i32;
     let n = 1 << pow;
+    println!("n: {}, {} [s]", n, n as f64 / spec.fs);
     let flip_sw = if enable_flip { 1.0 } else { -1.0 };
 
     let mut up_tsp_real: Vec<f64> = vec![0.0; n];
@@ -255,18 +256,27 @@ fn exec_generate_tsp(
         deque.rotate_left(shift);
     }
 
-
-    Ok(deque.into())
+    Ok((deque.into(), n as f64, n_samples as usize))
 }
 
 pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: &str, enable_flip: bool) -> Result<Vec<f64>, Box<dyn Error>> {
-    let output = match tsp_type {
-        "linear" => { exec_generate_tsp(&spec, design_linear_tsp_spectrum, enable_flip)? }
-        "log" => { exec_generate_tsp(&spec, design_log_tsp_spectrum, enable_flip)? }
+    match tsp_type {
+        "linear" => {
+            let (samples, n, n_samples) = exec_generate_tsp(&spec, design_linear_tsp_spectrum, enable_flip)?;
+            Ok(
+                samples.iter()
+                    .skip((n as f64 * 0.2) as usize)
+                    .take(n_samples as usize)
+                    .cloned()
+                    .collect()
+            )
+        }
+        "log" => {
+            let (samples, _n, _n_samples) = exec_generate_tsp(&spec, design_log_tsp_spectrum, enable_flip)?;
+            Ok(samples)
+        }
         _ => { return Err("unexpected type of tsp signal".into()); }
-    };
-
-    Ok(output)
+    }
 }
 
 fn generate_log_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f64>, Box<dyn Error>> {
