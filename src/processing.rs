@@ -29,7 +29,7 @@ where
 
 pub fn apply_taper_to_wav(options: &commands::taper::TaperOptions) -> Result<(), Box<dyn Error>> {
     let taper_spec = gen::get_taper_spec(Some(&options.taper_opt)).unwrap();
-    let (mut samples, spec) = fileio::wavread::read_wav_file(options.input.as_str())?;
+    let (mut samples, spec) = fileio::read_wav_file(options.input.as_str())?;
     let num_ch = samples.len();
 
     for i in 0..num_ch {
@@ -37,14 +37,14 @@ pub fn apply_taper_to_wav(options: &commands::taper::TaperOptions) -> Result<(),
     }
 
     let fileinfo = crate::fileio::set_output_filename(options.output.clone(), options.input.as_str())?;
-    fileio::wavwrite::write_wav_file(spec, fileinfo.name.as_str(), &samples, true, true)?;
+    fileio::write_wav_file(spec, fileinfo.name.as_str(), &samples, true, true)?;
 
     println!("WAV file [{}] created successfully {}", fileinfo.name, fileinfo.exists_msg);
 
     Ok(())
 }
 
-pub fn signal_generator(args: commands::gen::GenOptions) -> Result<(), Box<dyn Error>> {
+pub fn signal_generator(args: &commands::gen::GenOptions) -> Result<(), Box<dyn Error>> {
     let common_options = args.waveform.get_common_opt();
     let d = args.waveform.get_duration_in_sec()?;
     let taper_spec = args.waveform.get_taper_spec();
@@ -64,8 +64,8 @@ pub fn signal_generator(args: commands::gen::GenOptions) -> Result<(), Box<dyn E
     let fileinfo = fileio::gen_file_name(
         &common_options.output_filename,
         sig_type,
-        startf,
-        endf,
+        startf as i32,
+        endf as i32,
         filename_ch,
         &args.waveform.get_duration_cmd(),
     )?;
@@ -74,7 +74,7 @@ pub fn signal_generator(args: commands::gen::GenOptions) -> Result<(), Box<dyn E
     let samples;
     match &args.waveform {
         WaveFormCommands::Sine(_) => {
-            samples = gen::generate_sine_wave(&signal_spec, startf as f64)?;
+            samples = gen::generate_sine_wave(&signal_spec, startf)?;
         }
         WaveFormCommands::Noise(noise_options) => {
             samples = gen::generate_noise(&signal_spec, &noise_options.noise_type)?;
@@ -86,7 +86,7 @@ pub fn signal_generator(args: commands::gen::GenOptions) -> Result<(), Box<dyn E
             samples = gen::generate_sweep_signal(&signal_spec, &sweep_options.type_of_sweep, startf, endf)?;
         }
         WaveFormCommands::Pwm(pwm_options) => {
-            let d_verified = value_verify(pwm_options.percent_of_duty, 0, 100);
+            let d_verified = value_verify(pwm_options.percent_of_duty, 0, 100) as f64;
             samples = gen::generate_pwm_signal(&signal_spec, startf, d_verified)?;
         }
         WaveFormCommands::Zeros(_) => {
@@ -104,7 +104,7 @@ pub fn signal_generator(args: commands::gen::GenOptions) -> Result<(), Box<dyn E
 
     let samples_to_write = [samples.clone(), samples];
 
-    fileio::wavwrite::write_wav_file(wav_spec, &fileinfo.name, &samples_to_write, enable_l, enable_r)?;
+    fileio::write_wav_file(wav_spec, &fileinfo.name, &samples_to_write, enable_l, enable_r)?;
 
     println!("WAV file [{}] created successfully {}", fileinfo.name, fileinfo.exists_msg);
 
@@ -122,9 +122,17 @@ pub fn cat_wav_files(options: &commands::wav::WavOptions) -> Result<(), Box<dyn 
         override_msg = "(file override)".to_string();
     }
 
-    fileio::wavwrite::write_wav_file(spec, output_filename.as_str(), &samples, true, true)?;
+    fileio::write_wav_file(spec, output_filename.as_str(), &samples, true, true)?;
 
     println!("WAV file [{}] created successfully {}", output_filename, override_msg);
 
+    Ok(())
+}
+
+pub fn wav_modurate(_options: &commands::modurate::ModOptions) -> Result<(), Box<dyn Error>> {
+    Ok(())
+}
+
+pub fn wav_conv(_options: &commands::conv::ConvOptions) -> Result<(), Box<dyn Error>> {
     Ok(())
 }

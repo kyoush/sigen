@@ -8,7 +8,7 @@ use crate::commands::common::TaperSpecOptions;
 pub struct SignalSpec {
     pub amp: f64,
     pub ch: String,
-    pub fs: i32,
+    pub fs: f64,
     pub d: f64,
     pub taper_spec: Option<TaperSpec>,
 }
@@ -42,11 +42,11 @@ fn trim_end_to_i32(cmd: &str, pattern: &str) -> Result<f64, String> {
     }
 }
 
-pub fn parse_freq(freq_cmd: &str) -> Result<i32, Box<dyn Error>> {
+pub fn parse_freq(freq_cmd: &str) -> Result<f64, Box<dyn Error>> {
     match freq_cmd.parse::<i32>() {
-        Ok(val) => { Ok (val) }
+        Ok(val) => { Ok (val as f64) }
         Err(_) => {
-            if let Ok(val) = trim_end_to_i32(freq_cmd, "k") { Ok(val as i32 * 1000) }
+            if let Ok(val) = trim_end_to_i32(freq_cmd, "k") { Ok(val * 1000.0) }
             else {
                 return Err(format!("cannot parse frequency [{}]", freq_cmd).into())
             }
@@ -99,10 +99,10 @@ fn do_apply_taper_both(samples: &mut Vec<f64>, taper_spec: &Option<TaperSpec>) -
 }
 
 pub fn generate_sine_wave(spec: &SignalSpec, freq: f64) -> Result<Vec<f64>, Box<dyn Error>> {
-    let sample_count = (spec.d * spec.fs as f64) as usize;
+    let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
     for i in 0..sample_count {
-        let t = i as f64/ spec.fs as f64;
+        let t = i as f64/ spec.fs;
         let sample = spec.amp * (2.0 * PI * freq * t).sin();
         samples.push(sample);
     }
@@ -112,7 +112,7 @@ pub fn generate_sine_wave(spec: &SignalSpec, freq: f64) -> Result<Vec<f64>, Box<
 }
 
 fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
-    let sample_count = (spec.d * spec.fs as f64) as usize;
+    let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
     for _ in 0..sample_count {
@@ -220,10 +220,11 @@ fn exec_generate_tsp(
     spec: &SignalSpec,
     design_tsp_spect: fn(usize, f64) -> Vec<Complex<f64>>,
     enable_flip: bool,
-) -> Result<Vec<f64>, Box<dyn Error>> {
-    let n_samples = spec.d * spec.fs as f64;
-    let pow = (n_samples * 2.0).log2().ceil() as i32;
+) -> Result<(Vec<f64>, f64, usize), Box<dyn Error>> {
+    let n_samples = spec.d * spec.fs;
+    let pow = (n_samples).log2().ceil() as i32;
     let n = 1 << pow;
+    println!("n: {}, {} [s]", n, n as f64 / spec.fs);
     let flip_sw = if enable_flip { 1.0 } else { -1.0 };
 
     let mut up_tsp_real: Vec<f64> = vec![0.0; n];
@@ -255,29 +256,38 @@ fn exec_generate_tsp(
         deque.rotate_left(shift);
     }
 
-
-    Ok(deque.into())
+    Ok((deque.into(), n as f64, n_samples as usize))
 }
 
 pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: &str, enable_flip: bool) -> Result<Vec<f64>, Box<dyn Error>> {
-    let output = match tsp_type {
-        "linear" => { exec_generate_tsp(&spec, design_linear_tsp_spectrum, enable_flip)? }
-        "log" => { exec_generate_tsp(&spec, design_log_tsp_spectrum, enable_flip)? }
+    match tsp_type {
+        "linear" => {
+            let (samples, n, n_samples) = exec_generate_tsp(&spec, design_linear_tsp_spectrum, enable_flip)?;
+            Ok(
+                samples.iter()
+                    .skip((n as f64 * 0.2) as usize)
+                    .take(n_samples as usize)
+                    .cloned()
+                    .collect()
+            )
+        }
+        "log" => {
+            let (samples, _n, _n_samples) = exec_generate_tsp(&spec, design_log_tsp_spectrum, enable_flip)?;
+            Ok(samples)
+        }
         _ => { return Err("unexpected type of tsp signal".into()); }
-    };
-
-    Ok(output)
+    }
 }
 
 fn generate_log_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f64>, Box<dyn Error>> {
-    let sample_count  = (spec.d * spec.fs as f64) as usize;
+    let sample_count  = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
     let ln_ratio = (e / s).ln();
     let k = ln_ratio / spec.d;
 
     for n in 0..sample_count {
-        let t = n as f64 / spec.fs as f64;
+        let t = n as f64 / spec.fs;
         let phase = 2.0 * PI * s * ((k * t).exp() - 1.0) / k;
         samples.push(spec.amp * phase.sin());
     }
@@ -286,11 +296,11 @@ fn generate_log_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f6
 }
 
 fn generate_linear_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f64>, Box<dyn Error>> {
-    let sample_count = (spec.d * spec.fs as f64) as usize;
+    let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
     for n in 0..sample_count {
-        let t = n as f64 / spec.fs as f64;
+        let t = n as f64 / spec.fs;
         let phase = 2.0 * PI * (s * t + ((e - s) / (2.0 * spec.d as f64)) * t * t);
         samples.push(spec.amp * phase.sin())
     }
@@ -301,12 +311,12 @@ fn generate_linear_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec
 pub fn generate_sweep_signal(
     spec: &SignalSpec,
     sweep_type: &str,
-    s: i32,
-    e: i32,
+    s: f64,
+    e: f64,
 ) -> Result<Vec<f64>, Box<dyn Error>> {
     let mut output = match sweep_type {
-        "linear" => { generate_linear_sweep_signal(spec, s as f64, e as f64)? }
-        "log" => { generate_log_sweep_signal(spec, s as f64, e as f64)? }
+        "linear" => { generate_linear_sweep_signal(spec, s, e)? }
+        "log" => { generate_log_sweep_signal(spec, s, e)? }
         _=> { return Err("Unknown swept type".into()) }
     };
 
@@ -314,14 +324,14 @@ pub fn generate_sweep_signal(
     Ok(output)
 }
 
-pub fn generate_pwm_signal(spec: &SignalSpec, freq: i32, duty: u32) -> Result<Vec<f64>, Box<dyn Error>> {
-    let mut samples = vec![0.0; (spec.d * spec.fs as f64) as usize];
+pub fn generate_pwm_signal(spec: &SignalSpec, freq: f64, duty: f64) -> Result<Vec<f64>, Box<dyn Error>> {
+    let mut samples = vec![0.0; (spec.d * spec.fs) as usize];
     let period_samples = spec.fs / freq;
-    let high_samples = (period_samples  as f64 * (duty as f64 / 100.0)) as usize;
+    let high_samples = (period_samples * (duty / 100.0)) as usize;
 
-    for period_start_point in (0..(spec.d * spec.fs as f64) as i32).step_by(period_samples as usize) {
+    for period_start_point in (0..(spec.d * spec.fs) as i32).step_by(period_samples as usize) {
         let end = period_start_point + high_samples as i32;
-        if end > (spec.d * spec.fs as f64) as i32 {
+        if end > (spec.d * spec.fs) as i32 {
             break;
         }
         for high_point in period_start_point..end {
@@ -334,5 +344,5 @@ pub fn generate_pwm_signal(spec: &SignalSpec, freq: i32, duty: u32) -> Result<Ve
 }
 
 pub fn generate_zeros(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
-    Ok(vec![0.0; (spec.d * spec.fs as f64) as usize])
+    Ok(vec![0.0; (spec.d * spec.fs) as usize])
 }

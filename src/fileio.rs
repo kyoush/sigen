@@ -2,10 +2,9 @@ use std::error::Error;
 use std::path::Path;
 use std::io::{self, Write};
 
-pub mod wavread;
-pub mod wavwrite;
+use hound::{WavSpec, WavReader, WavWriter};
 
-pub const RIFF_HEADER_SIZE: usize = 44; // bytes
+const RIFF_HEADER_SIZE: usize = 44; // bytes
 const FILESIZE_WARN_LEVEL: usize = 1_000_000_000; // 1GB
 
 pub struct FileInfo {
@@ -187,4 +186,57 @@ pub fn set_output_filename(output_filename: Option<Option<String>>, input_filena
     }
 
     Ok(fileinfo)
+}
+
+pub fn read_wav_file(filename: &str) -> Result<(Vec<Vec<f64>>, WavSpec), Box<dyn Error>> {
+    validate_wav_file(filename)?;
+
+    let mut reader =  WavReader::open(filename)?;
+    let spec = reader.spec().clone();
+    let num_channels = spec.channels as usize;
+    let mut samples = vec![Vec::new(); num_channels];
+
+    for (i, sample) in reader.samples::<i16>().enumerate() {
+        let sample = sample?;
+        let channel = i % num_channels;
+        samples[channel].push(sample as f64 / i16::MAX as f64);
+    }
+
+    Ok((samples, spec))
+}
+
+
+pub fn write_wav_file(
+    spec: WavSpec,
+    filename: &str,
+    samples: &[Vec<f64>],
+    enable_l: bool,
+    enable_r: bool,
+) -> Result<(), Box<dyn Error>> {
+    validate_wav_file(filename)?;
+
+    let mut writer = WavWriter::create(filename, spec)?;
+
+    let samples_per_ch = samples[0].len();
+    let num_ch = samples.len();
+
+    let output_filesize = (samples_per_ch * num_ch) * std::mem::size_of::<i16>() + RIFF_HEADER_SIZE;
+    output_filesize_check(output_filesize)?;
+
+    for i in 0..samples_per_ch {
+        for j in 0 .. num_ch {
+            let enable = if num_ch % 2 == 0 {
+                enable_l as i16
+            }else {
+                enable_r as i16
+            };
+
+            let sample_value: i16 =
+            (samples[j][i] * i16::MAX as f64).clamp(i16::MIN as f64, i16::MAX as f64) as i16;
+            writer.write_sample(sample_value * enable)?;
+        }
+    }
+
+    writer.flush()?;
+    Ok(())
 }
