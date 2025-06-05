@@ -58,10 +58,10 @@ pub fn parse_duration(duration_cmd: &str) -> Result<f64, Box<dyn Error>> {
     match duration_cmd.parse::<f64>() {
         Ok(val) => { Ok(val) }
         Err(_) => {
-            if let Ok(val) = trim_end_to_i32(duration_cmd, "m")          { Ok(val / 1000.0) }
-            else if let Ok(val) = trim_end_to_i32(duration_cmd, "msec")  { Ok(val / 1000.0) }
+            if let Ok(val) = trim_end_to_i32(duration_cmd, "msec")  { Ok(val / 1000.0) }
             else if let Ok(val) = trim_end_to_i32(duration_cmd, "s")     { Ok(val) }
             else if let Ok(val) = trim_end_to_i32(duration_cmd, "sec")   { Ok(val) }
+            else if let Ok(val) = trim_end_to_i32(duration_cmd, "m")     { Ok(val * 60.0) }
             else if let Ok(val) = trim_end_to_i32(duration_cmd, "min")   { Ok(val * 60.0) }
             else if let Ok(val) = trim_end_to_i32(duration_cmd, "h")     { Ok(val * 60.0 * 60.0) }
             else if let Ok(val) = trim_end_to_i32(duration_cmd, "hour")  { Ok(val * 60.0 * 60.0) }
