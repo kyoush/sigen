@@ -1,11 +1,10 @@
-use std::error::Error;
 use hound::WavSpec;
 use super::fileio;
 use indexmap::IndexMap;
 
 pub fn parse_input_files(
     input_files_command: &Vec<String>
-) -> Result<IndexMap<String, String>, Box<dyn Error>> {
+) -> Result<IndexMap<String, String>, Box<dyn std::error::Error>> {
     if input_files_command.is_empty() { return Err("input filename is not given".into()) }
 
     let mut input_files: IndexMap<String, String> = IndexMap::new();
@@ -46,7 +45,7 @@ fn append_stereo_signal(input: &Vec<Vec<f64>>, target: &mut Vec<Vec<f64>>) {
 fn concatenate_no_interval(
     input_files: IndexMap<String, String>,
     samples: &mut Vec<Vec<f64>>,
-) -> Result<WavSpec, Box<dyn Error>> {
+) -> Result<WavSpec, Box<dyn std::error::Error>> {
     let mut spec:  Option<WavSpec> = None;
 
     for(_, filename) in input_files {
@@ -88,7 +87,7 @@ fn do_cat_commands(
     cmd: Vec<String>,
     samples: &mut Vec<Vec<f64>>,
     filemap: IndexMap<String, String>,
-) -> Result<WavSpec, Box<dyn Error>>{
+) -> Result<WavSpec, Box<dyn std::error::Error>>{
     let mut spec: Option<WavSpec> = None;
     let flag = is_specify_key(&cmd);
 
@@ -163,7 +162,7 @@ fn do_cat_commands(
 pub fn parse_cat_commands(
     input_files:IndexMap<String, String>,
     cat_cmd: Option<Vec<String>>,
-) -> Result<(WavSpec, Vec<Vec<f64>>), Box<dyn Error>> {
+) -> Result<(WavSpec, Vec<Vec<f64>>), Box<dyn std::error::Error>> {
     let mut samples: Vec<Vec<f64>> = Vec::new();
 
     let spec = match cat_cmd {

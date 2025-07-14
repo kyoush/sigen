@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, error::Error};
+use std::{collections::VecDeque};
 use std::f64::consts::PI;
 use rustfft::{ FftPlanner, num_complex::Complex, num_traits::Zero};
 use rtaper::{WindowType, TaperSpec};
@@ -46,7 +46,7 @@ fn strip_suffix_and_parse_f64(cmd: &str, suffix: &str) -> Result<f64, String> {
     }
 }
 
-pub fn parse_freq(freq_cmd: &str) -> Result<f64, Box<dyn Error>> {
+pub fn parse_freq(freq_cmd: &str) -> Result<f64, Box<dyn std::error::Error>> {
     match freq_cmd.parse::<i32>() {
         Ok(val) => { Ok (val as f64) }
         Err(_) => {
@@ -58,7 +58,7 @@ pub fn parse_freq(freq_cmd: &str) -> Result<f64, Box<dyn Error>> {
     }
 }
 
-pub fn parse_duration(duration_cmd: &str) -> Result<f64, Box<dyn Error>> {
+pub fn parse_duration(duration_cmd: &str) -> Result<f64, Box<dyn std::error::Error>> {
     match duration_cmd.parse::<f64>() {
         Ok(val) => { Ok(val) }
         Err(_) => {
@@ -114,7 +114,7 @@ pub fn parse_filesize(filesize_cmd: &str, opt: &common::CommonOptions) -> Result
 }
 
 fn do_apply_taper_end(samples: &mut Vec<f64>, taper_spec: &Option<TaperSpec>,
-) -> Result<Vec<f64>, Box<dyn Error>> {
+) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     match taper_spec {
         Some(spec) => {
             rtaper::apply_taper_fade_out(samples, &spec)?;
@@ -126,7 +126,7 @@ fn do_apply_taper_end(samples: &mut Vec<f64>, taper_spec: &Option<TaperSpec>,
     }
 }
 
-fn do_apply_taper_both(samples: &mut Vec<f64>, taper_spec: &Option<TaperSpec>) -> Result<Vec<f64>, Box<dyn Error>>{
+fn do_apply_taper_both(samples: &mut Vec<f64>, taper_spec: &Option<TaperSpec>) -> Result<Vec<f64>, Box<dyn std::error::Error>>{
     match taper_spec {
         Some(spec) => {
             rtaper::apply_taper_both(samples, &spec)?;
@@ -138,7 +138,7 @@ fn do_apply_taper_both(samples: &mut Vec<f64>, taper_spec: &Option<TaperSpec>) -
     }
 }
 
-pub fn generate_sine_wave(spec: &SignalSpec, freq: f64) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn generate_sine_wave(spec: &SignalSpec, freq: f64) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
     for i in 0..sample_count {
@@ -151,7 +151,7 @@ pub fn generate_sine_wave(spec: &SignalSpec, freq: f64) -> Result<Vec<f64>, Box<
     Ok(samples)
 }
 
-fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
+fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
@@ -163,7 +163,7 @@ fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
     Ok(samples)
 }
 
-fn generate_pink_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
+fn generate_pink_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let white_noise = generate_white_noise(spec)?
         .into_iter()
         .enumerate()
@@ -203,7 +203,7 @@ fn generate_pink_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
     Ok(output)
 }
 
-pub fn generate_noise(spec: &SignalSpec, noise_type: &str) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn generate_noise(spec: &SignalSpec, noise_type: &str) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let mut samples = match noise_type {
         "white" => { generate_white_noise(spec) }?,
         "pink" => { generate_pink_noise(spec) }?,
@@ -260,7 +260,7 @@ fn exec_generate_tsp(
     spec: &SignalSpec,
     design_tsp_spect: fn(usize, f64) -> Vec<Complex<f64>>,
     enable_flip: bool,
-) -> Result<(Vec<f64>, f64, usize), Box<dyn Error>> {
+) -> Result<(Vec<f64>, f64, usize), Box<dyn std::error::Error>> {
     let n_samples = spec.d * spec.fs;
     let pow = (n_samples).log2().ceil() as i32;
     let n = 1 << pow;
@@ -299,7 +299,7 @@ fn exec_generate_tsp(
     Ok((deque.into(), n as f64, n_samples as usize))
 }
 
-pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: &str, enable_flip: bool) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: &str, enable_flip: bool) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     match tsp_type {
         "linear" => {
             let (samples, n, n_samples) = exec_generate_tsp(&spec, design_linear_tsp_spectrum, enable_flip)?;
@@ -319,7 +319,7 @@ pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: &str, enable_flip: bool)
     }
 }
 
-fn generate_log_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f64>, Box<dyn Error>> {
+fn generate_log_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let sample_count  = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
@@ -335,7 +335,7 @@ fn generate_log_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f6
     Ok(samples)
 }
 
-fn generate_linear_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f64>, Box<dyn Error>> {
+fn generate_linear_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
@@ -353,7 +353,7 @@ pub fn generate_sweep_signal(
     sweep_type: &str,
     s: f64,
     e: f64,
-) -> Result<Vec<f64>, Box<dyn Error>> {
+) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let mut output = match sweep_type {
         "linear" => { generate_linear_sweep_signal(spec, s, e)? }
         "log" => { generate_log_sweep_signal(spec, s, e)? }
@@ -364,7 +364,7 @@ pub fn generate_sweep_signal(
     Ok(output)
 }
 
-pub fn generate_pwm_signal(spec: &SignalSpec, freq: f64, duty: f64) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn generate_pwm_signal(spec: &SignalSpec, freq: f64, duty: f64) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let mut samples = vec![0.0; (spec.d * spec.fs) as usize];
     let period_samples = spec.fs / freq;
     let high_samples = (period_samples * (duty / 100.0)) as usize;
@@ -383,6 +383,6 @@ pub fn generate_pwm_signal(spec: &SignalSpec, freq: f64, duty: f64) -> Result<Ve
     Ok(samples)
 }
 
-pub fn generate_zeros(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn generate_zeros(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     Ok(vec![0.0; (spec.d * spec.fs) as usize])
 }

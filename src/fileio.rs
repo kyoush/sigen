@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::path::Path;
 use std::io::{self, Write};
 
@@ -19,7 +18,7 @@ fn is_wav_file(filename: &str) -> bool {
         .unwrap_or(false)
 }
 
-pub fn validate_wav_file(filename: &str) -> Result<(), Box<dyn Error>> {
+pub fn validate_wav_file(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
     if !is_wav_file(filename) {
         return Err(format!("The filename must have a .wav extension. [{}]", filename).into());
     }
@@ -31,7 +30,7 @@ pub fn is_file_exist(filename: &str) -> bool {
     Path::new(filename).exists()
 }
 
-pub fn validate_file_exist(filename: &str) -> Result<(), Box<dyn Error>> {
+pub fn validate_file_exist(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
     if !is_file_exist(filename) {
         return Err(format!("File [{}] not found.", filename).into());
     }
@@ -39,7 +38,7 @@ pub fn validate_file_exist(filename: &str) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn file_override_check(filename: &str) -> Result<(), Box<dyn Error>> {
+pub fn file_override_check(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut input = String::new();
     print!("Do you want to overwrite [{}]? [y/N] ", filename);
     io::stdout().flush().unwrap();
@@ -57,7 +56,7 @@ pub fn file_override_check(filename: &str) -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn output_filesize_check(filesize: usize) -> Result<(), Box<dyn Error>> {
+fn output_filesize_check(filesize: usize) -> Result<(), Box<dyn std::error::Error>> {
     if filesize > FILESIZE_WARN_LEVEL {
         let mut input = String::new();
         print!(
@@ -126,7 +125,7 @@ pub fn gen_file_name(
     start_freq: i32,
     end_freq: i32,
     filename_ch: &str,
-    d_cmd: &str) -> Result<FileInfo, Box<dyn Error>> {
+    d_cmd: &str) -> Result<FileInfo, Box<dyn std::error::Error>> {
     let filename = if let Some(name) = output_filename {
         name.clone()
     }else {
@@ -154,7 +153,7 @@ pub fn gen_file_name(
     })
 }
 
-pub fn set_output_filename(output_filename: Option<Option<String>>, input_filename: &str) -> Result<FileInfo, Box<dyn Error>> {
+pub fn set_output_filename(output_filename: Option<Option<String>>, input_filename: &str) -> Result<FileInfo, Box<dyn std::error::Error>> {
     let mut fileinfo = FileInfo{
         name: String::new(),
         exists_msg: String::new(),
@@ -188,7 +187,7 @@ pub fn set_output_filename(output_filename: Option<Option<String>>, input_filena
     Ok(fileinfo)
 }
 
-pub fn read_wav_file(filename: &str) -> Result<(Vec<Vec<f64>>, WavSpec), Box<dyn Error>> {
+pub fn read_wav_file(filename: &str) -> Result<(Vec<Vec<f64>>, WavSpec), Box<dyn std::error::Error>> {
     validate_wav_file(filename)?;
 
     let mut reader =  WavReader::open(filename)?;
@@ -212,7 +211,7 @@ pub fn write_wav_file(
     samples: &[Vec<f64>],
     enable_l: bool,
     enable_r: bool,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<(), Box<dyn std::error::Error>> {
     validate_wav_file(filename)?;
 
     let mut writer = WavWriter::create(filename, spec)?;
