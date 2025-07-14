@@ -8,8 +8,16 @@ pub struct CommonOptions {
     #[arg(
         short, long,
         default_value_t = super::D_DEF.to_string(),
+        group = "exclusive"
     )]
     pub duration: String,
+
+    /// Output Filesize.
+    #[arg(
+        short, long,
+        group = "exclusive"
+    )]
+    pub size_of_file: Option<String>,
 
     /// the maximum absolute value of the signal samplitude
     #[arg(

@@ -8,7 +8,7 @@ pub mod gen;
 mod cat;
 
 const CH: u16 = 2; // stereo
-const BITS_PER_SAMPLE: u16 = 16;
+pub const BITS_PER_SAMPLE: u16 = 16;
 
 pub fn value_verify<T>(value: T, min: T, max: T) -> T
 where
@@ -46,7 +46,14 @@ pub fn apply_taper_to_wav(options: &commands::taper::TaperOptions) -> Result<(),
 
 pub fn signal_generator(args: &commands::gen::GenOptions) -> Result<(), Box<dyn Error>> {
     let common_options = args.waveform.get_common_opt();
-    let d = args.waveform.get_duration_in_sec()?;
+    let (d, d_cmd) = if let Some(cmd) = &common_options.size_of_file {
+        let tmp = args.waveform.get_duration_from_filesize(&cmd)?;
+        (tmp, cmd)
+    }else {
+        let tmp = args.waveform.get_duration_in_sec()?;
+        (tmp, args.waveform.get_duration_cmd())
+    };
+    println!("duration: {:?}", d);
     let taper_spec = args.waveform.get_taper_spec();
     let signal_spec = common_options.get_signal_spec(taper_spec, d);
 
@@ -67,7 +74,7 @@ pub fn signal_generator(args: &commands::gen::GenOptions) -> Result<(), Box<dyn 
         startf as i32,
         endf as i32,
         filename_ch,
-        &args.waveform.get_duration_cmd(),
+        d_cmd,
     )?;
 
     // generate signals

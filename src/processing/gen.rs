@@ -3,7 +3,8 @@ use std::f64::consts::PI;
 use rustfft::{ FftPlanner, num_complex::Complex, num_traits::Zero};
 use rtaper::{WindowType, TaperSpec};
 
-use crate::commands::common::TaperSpecOptions;
+use crate::commands::common::{self, TaperSpecOptions};
+use crate::processing;
 
 pub struct SignalSpec {
     pub amp: f64,
@@ -33,10 +34,13 @@ pub fn get_taper_spec(opt: Option<&TaperSpecOptions>) -> Option<TaperSpec> {
     }
 }
 
-fn trim_end_to_i32(cmd: &str, pattern: &str) -> Result<f64, String> {
-    if cmd.to_lowercase().ends_with(pattern) {
-        let trim = cmd.trim_end_matches(&pattern);
-        trim.parse::<f64>().map_err(|e| e.to_string())
+fn strip_suffix_and_parse_f64(cmd: &str, suffix: &str) -> Result<f64, String> {
+    let cmd_lower = cmd.to_lowercase();
+    let suffix_lower = suffix.to_lowercase();
+
+    if cmd_lower.ends_with(&suffix_lower) {
+        let number_part = &cmd[0..cmd.len() - suffix.len()];
+        number_part.trim().parse::<f64>().map_err(|e| e.to_string())
     }else {
         Err("partern not found end".to_string())
     }
@@ -46,7 +50,7 @@ pub fn parse_freq(freq_cmd: &str) -> Result<f64, Box<dyn Error>> {
     match freq_cmd.parse::<i32>() {
         Ok(val) => { Ok (val as f64) }
         Err(_) => {
-            if let Ok(val) = trim_end_to_i32(freq_cmd, "k") { Ok(val * 1000.0) }
+            if let Ok(val) = strip_suffix_and_parse_f64(freq_cmd, "k") { Ok(val * 1000.0) }
             else {
                 return Err(format!("cannot parse frequency [{}]", freq_cmd).into())
             }
@@ -58,19 +62,55 @@ pub fn parse_duration(duration_cmd: &str) -> Result<f64, Box<dyn Error>> {
     match duration_cmd.parse::<f64>() {
         Ok(val) => { Ok(val) }
         Err(_) => {
-            if let Ok(val) = trim_end_to_i32(duration_cmd, "msec")  { Ok(val / 1000.0) }
-            else if let Ok(val) = trim_end_to_i32(duration_cmd, "s")     { Ok(val) }
-            else if let Ok(val) = trim_end_to_i32(duration_cmd, "sec")   { Ok(val) }
-            else if let Ok(val) = trim_end_to_i32(duration_cmd, "m")     { Ok(val * 60.0) }
-            else if let Ok(val) = trim_end_to_i32(duration_cmd, "min")   { Ok(val * 60.0) }
-            else if let Ok(val) = trim_end_to_i32(duration_cmd, "h")     { Ok(val * 60.0 * 60.0) }
-            else if let Ok(val) = trim_end_to_i32(duration_cmd, "hour")  { Ok(val * 60.0 * 60.0) }
-            else if let Ok(val) = trim_end_to_i32(duration_cmd, "hours") { Ok(val * 60.0 * 60.0) }
+            if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "msec")  { Ok(val / 1000.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "s")     { Ok(val) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "sec")   { Ok(val) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "m")     { Ok(val * 60.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "min")   { Ok(val * 60.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "h")     { Ok(val * 60.0 * 60.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "hour")  { Ok(val * 60.0 * 60.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "hours") { Ok(val * 60.0 * 60.0) }
             else {
                 return Err(format!("cannot parse duration [{}]", duration_cmd).into())
             }
         }
     }
+}
+
+fn byte_to_second(total_bytes: f64, fs: f64) -> f64 {
+    const WAV_HEADER_SIZE: f64 = 44.0;
+    const CHANNELS: f64 = 2.0;
+
+    let data_bytes = total_bytes - WAV_HEADER_SIZE;
+    let bytes_per_sample = (processing::BITS_PER_SAMPLE as f64) / 8.0;
+    let frame_size = bytes_per_sample * CHANNELS; // bytes per frame
+
+    let num_frames = data_bytes / frame_size;
+    let duration_sec = num_frames / fs;
+
+    duration_sec
+}
+
+pub fn parse_filesize(filesize_cmd: &str, opt: &common::CommonOptions) -> Result<f64, Box<dyn std::error::Error>> {
+    let s = match filesize_cmd.parse::<f64>() {
+        Ok(val) => { Ok::<f64, Box<dyn std::error::Error>>(val) }
+        Err(_) => {
+            if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "K") { Ok(val * 1000.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "KB") { Ok(val * 1000.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "KiB") { Ok(val * 1024.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "M") { Ok(val * 1000.0 * 1000.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "MB") { Ok(val * 1000.0 * 1000.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "MiB") { Ok(val * 1024.0 * 1024.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "G") { Ok(val * 1000.0 * 1000.0 * 1000.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "GB") { Ok(val * 1000.0 * 1000.0 * 1000.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "GiB") { Ok(val * 1024.0 * 1024.0 * 1024.0) }
+            else {
+                return Err(format!("cannot parse size-of-file [{}]", filesize_cmd).into())
+            }
+        }
+    }?;
+
+    Ok(byte_to_second(s, opt.rate_of_sample))
 }
 
 fn do_apply_taper_end(samples: &mut Vec<f64>, taper_spec: &Option<TaperSpec>,

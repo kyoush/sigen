@@ -79,6 +79,17 @@ impl WaveFormCommands {
         }
     }
 
+    pub fn get_duration_from_filesize(&self, cmd: &str) -> Result<f64, Box<dyn std::error::Error>> {
+        match self {
+            WaveFormCommands::Sine(_) => crate::processing::gen::parse_filesize(cmd, self.get_common_opt()),
+            WaveFormCommands::Noise(_) => crate::processing::gen::parse_filesize(cmd, self.get_common_opt()),
+            WaveFormCommands::Tsp(_) => crate::processing::gen::parse_filesize(cmd, self.get_common_opt()),
+            WaveFormCommands::Sweep(_) => crate::processing::gen::parse_filesize(cmd, self.get_common_opt()),
+            WaveFormCommands::Pwm(_) => crate::processing::gen::parse_filesize(cmd, self.get_common_opt()),
+            WaveFormCommands::Zeros(_) => crate::processing::gen::parse_filesize(cmd, self.get_common_opt()),
+        }
+    }
+
     pub fn get_fileinfo(&self, fs: f64) -> (String, f64, f64) {
         match self {
             WaveFormCommands::Sine(opt) => {
