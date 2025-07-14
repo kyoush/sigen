@@ -225,15 +225,15 @@ pub fn write_wav_file(
 
     for i in 0..samples_per_ch {
         for j in 0 .. num_ch {
-            let enable = if num_ch % 2 == 0 {
-                enable_l as i16
-            }else {
-                enable_r as i16
+            let enabled = match j {
+                0 => enable_l,
+                1 => enable_r,
+                _ => true,
             };
 
             let sample_value: i16 =
             (samples[j][i] * i16::MAX as f64).clamp(i16::MIN as f64, i16::MAX as f64) as i16;
-            writer.write_sample(sample_value * enable)?;
+            writer.write_sample(if enabled { sample_value } else { 0 })?;
         }
     }
 
