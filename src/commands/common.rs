@@ -4,6 +4,13 @@ use crate::processing::gen::SignalSpec;
 
 #[derive(Args, Clone, Debug)]
 pub struct CommonOptions {
+    /// duration of the signal in seconds.
+    #[arg(
+        short, long,
+        default_value_t = super::D_DEF.to_string(),
+    )]
+    pub duration: String,
+
     /// the maximum absolute value of the signal samplitude
     #[arg(
         short, long,
