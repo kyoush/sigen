@@ -1,4 +1,3 @@
-use std::error::Error;
 use hound::WavSpec;
 use crate::commands;
 use crate::commands::gen::WaveFormCommands;
@@ -8,7 +7,7 @@ pub mod gen;
 mod cat;
 
 const CH: u16 = 2; // stereo
-const BITS_PER_SAMPLE: u16 = 16;
+pub const BITS_PER_SAMPLE: u16 = 16;
 
 pub fn value_verify<T>(value: T, min: T, max: T) -> T
 where
@@ -27,7 +26,7 @@ where
     }
 }
 
-pub fn apply_taper_to_wav(options: &commands::taper::TaperOptions) -> Result<(), Box<dyn Error>> {
+pub fn apply_taper_to_wav(options: &commands::taper::TaperOptions) -> Result<(), Box<dyn std::error::Error>> {
     let taper_spec = gen::get_taper_spec(Some(&options.taper_opt)).unwrap();
     let (mut samples, spec) = fileio::read_wav_file(options.input.as_str())?;
     let num_ch = samples.len();
@@ -44,9 +43,16 @@ pub fn apply_taper_to_wav(options: &commands::taper::TaperOptions) -> Result<(),
     Ok(())
 }
 
-pub fn signal_generator(args: &commands::gen::GenOptions) -> Result<(), Box<dyn Error>> {
+pub fn signal_generator(args: &commands::gen::GenOptions) -> Result<(), Box<dyn std::error::Error>> {
     let common_options = args.waveform.get_common_opt();
-    let d = args.waveform.get_duration_in_sec()?;
+    let (d, d_cmd) = if let Some(cmd) = &common_options.size_of_file {
+        let tmp = args.waveform.get_duration_from_filesize(&cmd)?;
+        (tmp, cmd)
+    }else {
+        let tmp = args.waveform.get_duration_in_sec()?;
+        (tmp, args.waveform.get_duration_cmd())
+    };
+    println!("duration: {:?}", d);
     let taper_spec = args.waveform.get_taper_spec();
     let signal_spec = common_options.get_signal_spec(taper_spec, d);
 
@@ -55,7 +61,7 @@ pub fn signal_generator(args: &commands::gen::GenOptions) -> Result<(), Box<dyn 
         "R" => (false, true, "_r_only"),
         "LR" => (true, true, ""),
         _ => {
-            return Err("unknown spec ch error".into());
+            return Err("unknown spec ch std::error::error".into());
         }
     };
 
@@ -67,7 +73,7 @@ pub fn signal_generator(args: &commands::gen::GenOptions) -> Result<(), Box<dyn 
         startf as i32,
         endf as i32,
         filename_ch,
-        &args.waveform.get_duration_cmd(),
+        d_cmd,
     )?;
 
     // generate signals
@@ -111,7 +117,7 @@ pub fn signal_generator(args: &commands::gen::GenOptions) -> Result<(), Box<dyn 
     Ok(())
 }
 
-pub fn cat_wav_files(options: &commands::wav::WavOptions) -> Result<(), Box<dyn Error>> {
+pub fn cat_wav_files(options: &commands::wav::WavOptions) -> Result<(), Box<dyn std::error::Error>> {
     let (inputs, cat_cmd, output_filename) = options.parse_commands()?;
     let input_files: indexmap::IndexMap<String, String> = cat::parse_input_files(&inputs)?;
     let (spec, samples) = cat::parse_cat_commands(input_files, cat_cmd)?;
@@ -129,10 +135,10 @@ pub fn cat_wav_files(options: &commands::wav::WavOptions) -> Result<(), Box<dyn 
     Ok(())
 }
 
-pub fn wav_modurate(_options: &commands::modurate::ModOptions) -> Result<(), Box<dyn Error>> {
+pub fn wav_modurate(_options: &commands::modurate::ModOptions) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-pub fn wav_conv(_options: &commands::conv::ConvOptions) -> Result<(), Box<dyn Error>> {
+pub fn wav_conv(_options: &commands::conv::ConvOptions) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }

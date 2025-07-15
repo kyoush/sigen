@@ -1,9 +1,10 @@
-use std::{collections::VecDeque, error::Error};
+use std::{collections::VecDeque};
 use std::f64::consts::PI;
 use rustfft::{ FftPlanner, num_complex::Complex, num_traits::Zero};
 use rtaper::{WindowType, TaperSpec};
 
-use crate::commands::common::TaperSpecOptions;
+use crate::commands::common::{self, TaperSpecOptions};
+use crate::processing;
 
 pub struct SignalSpec {
     pub amp: f64,
@@ -33,20 +34,23 @@ pub fn get_taper_spec(opt: Option<&TaperSpecOptions>) -> Option<TaperSpec> {
     }
 }
 
-fn trim_end_to_i32(cmd: &str, pattern: &str) -> Result<f64, String> {
-    if cmd.to_lowercase().ends_with(pattern) {
-        let trim = cmd.trim_end_matches(&pattern);
-        trim.parse::<f64>().map_err(|e| e.to_string())
+fn strip_suffix_and_parse_f64(cmd: &str, suffix: &str) -> Result<f64, String> {
+    let cmd_lower = cmd.to_lowercase();
+    let suffix_lower = suffix.to_lowercase();
+
+    if cmd_lower.ends_with(&suffix_lower) {
+        let number_part = &cmd[0..cmd.len() - suffix.len()];
+        number_part.trim().parse::<f64>().map_err(|e| e.to_string())
     }else {
         Err("partern not found end".to_string())
     }
 }
 
-pub fn parse_freq(freq_cmd: &str) -> Result<f64, Box<dyn Error>> {
+pub fn parse_freq(freq_cmd: &str) -> Result<f64, Box<dyn std::error::Error>> {
     match freq_cmd.parse::<i32>() {
         Ok(val) => { Ok (val as f64) }
         Err(_) => {
-            if let Ok(val) = trim_end_to_i32(freq_cmd, "k") { Ok(val * 1000.0) }
+            if let Ok(val) = strip_suffix_and_parse_f64(freq_cmd, "k") { Ok(val * 1000.0) }
             else {
                 return Err(format!("cannot parse frequency [{}]", freq_cmd).into())
             }
@@ -54,18 +58,18 @@ pub fn parse_freq(freq_cmd: &str) -> Result<f64, Box<dyn Error>> {
     }
 }
 
-pub fn parse_duration(duration_cmd: &str) -> Result<f64, Box<dyn Error>> {
+pub fn parse_duration(duration_cmd: &str) -> Result<f64, Box<dyn std::error::Error>> {
     match duration_cmd.parse::<f64>() {
         Ok(val) => { Ok(val) }
         Err(_) => {
-            if let Ok(val) = trim_end_to_i32(duration_cmd, "m")          { Ok(val / 1000.0) }
-            else if let Ok(val) = trim_end_to_i32(duration_cmd, "msec")  { Ok(val / 1000.0) }
-            else if let Ok(val) = trim_end_to_i32(duration_cmd, "s")     { Ok(val) }
-            else if let Ok(val) = trim_end_to_i32(duration_cmd, "sec")   { Ok(val) }
-            else if let Ok(val) = trim_end_to_i32(duration_cmd, "min")   { Ok(val * 60.0) }
-            else if let Ok(val) = trim_end_to_i32(duration_cmd, "h")     { Ok(val * 60.0 * 60.0) }
-            else if let Ok(val) = trim_end_to_i32(duration_cmd, "hour")  { Ok(val * 60.0 * 60.0) }
-            else if let Ok(val) = trim_end_to_i32(duration_cmd, "hours") { Ok(val * 60.0 * 60.0) }
+            if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "msec")  { Ok(val / 1000.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "s")     { Ok(val) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "sec")   { Ok(val) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "m")     { Ok(val * 60.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "min")   { Ok(val * 60.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "h")     { Ok(val * 60.0 * 60.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "hour")  { Ok(val * 60.0 * 60.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(duration_cmd, "hours") { Ok(val * 60.0 * 60.0) }
             else {
                 return Err(format!("cannot parse duration [{}]", duration_cmd).into())
             }
@@ -73,8 +77,44 @@ pub fn parse_duration(duration_cmd: &str) -> Result<f64, Box<dyn Error>> {
     }
 }
 
+fn byte_to_second(total_bytes: f64, fs: f64) -> f64 {
+    const WAV_HEADER_SIZE: f64 = 44.0;
+    const CHANNELS: f64 = 2.0;
+
+    let data_bytes = total_bytes - WAV_HEADER_SIZE;
+    let bytes_per_sample = (processing::BITS_PER_SAMPLE as f64) / 8.0;
+    let frame_size = bytes_per_sample * CHANNELS; // bytes per frame
+
+    let num_frames = data_bytes / frame_size;
+    let duration_sec = num_frames / fs;
+
+    duration_sec
+}
+
+pub fn parse_filesize(filesize_cmd: &str, opt: &common::CommonOptions) -> Result<f64, Box<dyn std::error::Error>> {
+    let s = match filesize_cmd.parse::<f64>() {
+        Ok(val) => { Ok::<f64, Box<dyn std::error::Error>>(val) }
+        Err(_) => {
+            if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "K") { Ok(val * 1000.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "KB") { Ok(val * 1000.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "KiB") { Ok(val * 1024.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "M") { Ok(val * 1000.0 * 1000.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "MB") { Ok(val * 1000.0 * 1000.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "MiB") { Ok(val * 1024.0 * 1024.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "G") { Ok(val * 1000.0 * 1000.0 * 1000.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "GB") { Ok(val * 1000.0 * 1000.0 * 1000.0) }
+            else if let Ok(val) = strip_suffix_and_parse_f64(filesize_cmd, "GiB") { Ok(val * 1024.0 * 1024.0 * 1024.0) }
+            else {
+                return Err(format!("cannot parse size-of-file [{}]", filesize_cmd).into())
+            }
+        }
+    }?;
+
+    Ok(byte_to_second(s, opt.rate_of_sample))
+}
+
 fn do_apply_taper_end(samples: &mut Vec<f64>, taper_spec: &Option<TaperSpec>,
-) -> Result<Vec<f64>, Box<dyn Error>> {
+) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     match taper_spec {
         Some(spec) => {
             rtaper::apply_taper_fade_out(samples, &spec)?;
@@ -86,7 +126,7 @@ fn do_apply_taper_end(samples: &mut Vec<f64>, taper_spec: &Option<TaperSpec>,
     }
 }
 
-fn do_apply_taper_both(samples: &mut Vec<f64>, taper_spec: &Option<TaperSpec>) -> Result<Vec<f64>, Box<dyn Error>>{
+fn do_apply_taper_both(samples: &mut Vec<f64>, taper_spec: &Option<TaperSpec>) -> Result<Vec<f64>, Box<dyn std::error::Error>>{
     match taper_spec {
         Some(spec) => {
             rtaper::apply_taper_both(samples, &spec)?;
@@ -98,7 +138,7 @@ fn do_apply_taper_both(samples: &mut Vec<f64>, taper_spec: &Option<TaperSpec>) -
     }
 }
 
-pub fn generate_sine_wave(spec: &SignalSpec, freq: f64) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn generate_sine_wave(spec: &SignalSpec, freq: f64) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
     for i in 0..sample_count {
@@ -111,7 +151,7 @@ pub fn generate_sine_wave(spec: &SignalSpec, freq: f64) -> Result<Vec<f64>, Box<
     Ok(samples)
 }
 
-fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
+fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
@@ -123,7 +163,7 @@ fn generate_white_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
     Ok(samples)
 }
 
-fn generate_pink_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
+fn generate_pink_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let white_noise = generate_white_noise(spec)?
         .into_iter()
         .enumerate()
@@ -163,7 +203,7 @@ fn generate_pink_noise(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
     Ok(output)
 }
 
-pub fn generate_noise(spec: &SignalSpec, noise_type: &str) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn generate_noise(spec: &SignalSpec, noise_type: &str) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let mut samples = match noise_type {
         "white" => { generate_white_noise(spec) }?,
         "pink" => { generate_pink_noise(spec) }?,
@@ -220,7 +260,7 @@ fn exec_generate_tsp(
     spec: &SignalSpec,
     design_tsp_spect: fn(usize, f64) -> Vec<Complex<f64>>,
     enable_flip: bool,
-) -> Result<(Vec<f64>, f64, usize), Box<dyn Error>> {
+) -> Result<(Vec<f64>, f64, usize), Box<dyn std::error::Error>> {
     let n_samples = spec.d * spec.fs;
     let pow = (n_samples).log2().ceil() as i32;
     let n = 1 << pow;
@@ -259,7 +299,7 @@ fn exec_generate_tsp(
     Ok((deque.into(), n as f64, n_samples as usize))
 }
 
-pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: &str, enable_flip: bool) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: &str, enable_flip: bool) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     match tsp_type {
         "linear" => {
             let (samples, n, n_samples) = exec_generate_tsp(&spec, design_linear_tsp_spectrum, enable_flip)?;
@@ -279,7 +319,7 @@ pub fn generate_tsp_signal(spec: &SignalSpec, tsp_type: &str, enable_flip: bool)
     }
 }
 
-fn generate_log_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f64>, Box<dyn Error>> {
+fn generate_log_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let sample_count  = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
@@ -295,7 +335,7 @@ fn generate_log_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f6
     Ok(samples)
 }
 
-fn generate_linear_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f64>, Box<dyn Error>> {
+fn generate_linear_sweep_signal(spec: &SignalSpec, s: f64, e: f64) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let sample_count = (spec.d * spec.fs) as usize;
     let mut samples = Vec::with_capacity(sample_count);
 
@@ -313,7 +353,7 @@ pub fn generate_sweep_signal(
     sweep_type: &str,
     s: f64,
     e: f64,
-) -> Result<Vec<f64>, Box<dyn Error>> {
+) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let mut output = match sweep_type {
         "linear" => { generate_linear_sweep_signal(spec, s, e)? }
         "log" => { generate_log_sweep_signal(spec, s, e)? }
@@ -324,7 +364,7 @@ pub fn generate_sweep_signal(
     Ok(output)
 }
 
-pub fn generate_pwm_signal(spec: &SignalSpec, freq: f64, duty: f64) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn generate_pwm_signal(spec: &SignalSpec, freq: f64, duty: f64) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     let mut samples = vec![0.0; (spec.d * spec.fs) as usize];
     let period_samples = spec.fs / freq;
     let high_samples = (period_samples * (duty / 100.0)) as usize;
@@ -343,6 +383,6 @@ pub fn generate_pwm_signal(spec: &SignalSpec, freq: f64, duty: f64) -> Result<Ve
     Ok(samples)
 }
 
-pub fn generate_zeros(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn generate_zeros(spec: &SignalSpec) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
     Ok(vec![0.0; (spec.d * spec.fs) as usize])
 }

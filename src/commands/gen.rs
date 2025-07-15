@@ -59,23 +59,34 @@ impl WaveFormCommands {
 
     pub fn get_duration_cmd(&self) -> &String {
         match self {
-            WaveFormCommands::Sine(opt) => &opt.duration,
-            WaveFormCommands::Noise(opt) => &opt.duration,
-            WaveFormCommands::Tsp(opt) => &opt.duration,
-            WaveFormCommands::Sweep(opt) => &opt.duration,
-            WaveFormCommands::Pwm(opt) => &opt.duration,
-            WaveFormCommands::Zeros(opt) => &opt.duration,
+            WaveFormCommands::Sine(opt) => &opt.options.duration,
+            WaveFormCommands::Noise(opt) => &opt.options.duration,
+            WaveFormCommands::Tsp(opt) => &opt.options.duration,
+            WaveFormCommands::Sweep(opt) => &opt.options.duration,
+            WaveFormCommands::Pwm(opt) => &opt.options.duration,
+            WaveFormCommands::Zeros(opt) => &opt.options.duration,
         }
     }
 
     pub fn get_duration_in_sec(&self) -> Result<f64, Box<dyn std::error::Error>> {
         match self {
-            WaveFormCommands::Sine(opt) => crate::processing::gen::parse_duration(&opt.duration),
-            WaveFormCommands::Noise(opt) => crate::processing::gen::parse_duration(&opt.duration),
-            WaveFormCommands::Tsp(opt) => crate::processing::gen::parse_duration(&opt.duration),
-            WaveFormCommands::Sweep(opt) => crate::processing::gen::parse_duration(&opt.duration),
-            WaveFormCommands::Pwm(opt) => crate::processing::gen::parse_duration(&opt.duration),
-            WaveFormCommands::Zeros(opt) => crate::processing::gen::parse_duration(&opt.duration),
+            WaveFormCommands::Sine(opt) => crate::processing::gen::parse_duration(&opt.options.duration),
+            WaveFormCommands::Noise(opt) => crate::processing::gen::parse_duration(&opt.options.duration),
+            WaveFormCommands::Tsp(opt) => crate::processing::gen::parse_duration(&opt.options.duration),
+            WaveFormCommands::Sweep(opt) => crate::processing::gen::parse_duration(&opt.options.duration),
+            WaveFormCommands::Pwm(opt) => crate::processing::gen::parse_duration(&opt.options.duration),
+            WaveFormCommands::Zeros(opt) => crate::processing::gen::parse_duration(&opt.options.duration),
+        }
+    }
+
+    pub fn get_duration_from_filesize(&self, cmd: &str) -> Result<f64, Box<dyn std::error::Error>> {
+        match self {
+            WaveFormCommands::Sine(_) => crate::processing::gen::parse_filesize(cmd, self.get_common_opt()),
+            WaveFormCommands::Noise(_) => crate::processing::gen::parse_filesize(cmd, self.get_common_opt()),
+            WaveFormCommands::Tsp(_) => crate::processing::gen::parse_filesize(cmd, self.get_common_opt()),
+            WaveFormCommands::Sweep(_) => crate::processing::gen::parse_filesize(cmd, self.get_common_opt()),
+            WaveFormCommands::Pwm(_) => crate::processing::gen::parse_filesize(cmd, self.get_common_opt()),
+            WaveFormCommands::Zeros(_) => crate::processing::gen::parse_filesize(cmd, self.get_common_opt()),
         }
     }
 
@@ -125,13 +136,6 @@ pub struct SineOptions {
 
     #[command(flatten)]
     pub taper_opt: common::TaperSpecOptions,
-
-    /// duration of the signal in seconds.
-    #[arg(
-        short, long,
-        default_value_t = super::D_DEF_LONG.to_string(),
-    )]
-    pub duration: String,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -150,12 +154,6 @@ pub struct NoiseOptions {
     #[command(flatten)]
     pub taper_opt: common::TaperSpecOptions,
 
-    /// duration of the signal in seconds.
-    #[arg(
-        short, long,
-        default_value_t = super::D_DEF_LONG.to_string(),
-    )]
-    pub duration: String,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -170,13 +168,6 @@ pub struct TspOptions {
 
     #[command(flatten)]
     pub options: common::CommonOptions,
-
-    /// duration of the signal in seconds.
-    #[arg(
-        short, long,
-        default_value_t = super::D_DEF_SHORT.to_string(),
-    )]
-    pub duration: String,
 
     /// convert to down TSP by flipping the time axis
     #[arg(short, long)]
@@ -212,13 +203,6 @@ pub struct SweepOptions {
 
     #[command(flatten)]
     pub taper_opt: common::TaperSpecOptions,
-
-    /// duration of the signal in seconds.
-    #[arg(
-        short, long,
-        default_value_t = super::D_DEF_LONG.to_string(),
-    )]
-    pub duration: String,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -242,24 +226,10 @@ pub struct PwmOptions {
 
     #[command(flatten)]
     pub taper_opt: common::TaperSpecOptions,
-
-    /// duration of the signal in seconds.
-    #[arg(
-        short, long,
-        default_value_t = super::D_DEF_LONG.to_string(),
-    )]
-    pub duration: String,
 }
 
 #[derive(Args, Debug, Clone)]
 pub struct ZerosOptions {
     #[command(flatten)]
     pub options: common::CommonOptions,
-
-    /// duration of the signal in seconds.
-    #[arg(
-        short, long,
-        default_value_t = super::D_DEF_LONG.to_string(),
-    )]
-    pub duration: String,
 }
